@@ -1,5 +1,7 @@
 # F3X.no – oppsettveiviser for seilfly (EdgeTX)
 
+🇬🇧 **English version:** [README.en.md](README.en.md) – engelsk SD-pakke i *Releases*.
+
 Lua-verktøy for **RadioMaster TX16S MK3** (800×480) og **TX16S MK2** (480×272) med EdgeTX.
 Setter opp et seilfly steg for steg: pilotens brytere og kanaler, servoretning, senter,
 endepunkter, utslag, flymoduser (Normal, Landing, Speed, Termikk, motor), butterfly/crow,
@@ -39,10 +41,20 @@ Start med en ny, tom modell. Veiviseren skriver over mikser på kanalene den bru
 S1 = grov, S2 = fin justering (begge i midten før hvert ror). PAGE>/< hopper mellom ror uten å
 lagre, knapp 1–6 henter kanal 1–6. Hold SH inne i justeringene for å sette alle ror i senter.
 
+## Kommer
+
+**M-tail** er på trappene, men ikke klar ennå.
+
+## Meld fra om feil
+
+Finner du feil i teksten (norsk eller engelsk) eller i koden, eller noe som ikke virker på
+radioen din: åpne en **Issue** her på GitHub (fanen *Issues* → *New issue*). Skriv hvilken
+radio og EdgeTX-versjon du har, hvilket steg det gjelder, og legg gjerne ved et bilde av skjermen.
+
 ## Status
 
 Brukt på TX16S MK3 med EdgeTX 2.12.5 og ER8-mottaker. MK2-versjonen er samme kode, skalert ned,
-og er lite prøvd på ekte radio. Tilbakemeldinger: åpne en *Issue* her på GitHub.
+og er lite prøvd på ekte radio. Tilbakemeldinger er velkomne (se over).
 
 ## Lisens
 

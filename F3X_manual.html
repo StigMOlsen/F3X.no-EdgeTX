@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>F3X.no tool – manual</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --text: #1d232a; --muted: #5d6873; --line: #dde2e7;
+    --accent: #c4561a; --accent-bg: #fbece3; --warn: #b3261e; --warn-bg: #fdecea; --ok: #2e7d4f;
+    --code: #eef1f4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #11161b; --card: #1a2128; --text: #e6eaee; --muted: #9aa6b2; --line: #2c3640;
+      --accent: #f39c50; --accent-bg: #33241a; --warn: #ff8a80; --warn-bg: #3a1f1d; --ok: #6fcf97;
+      --code: #232c35;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 1.7rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  h2 { font-size: 1.25rem; margin: 32px 0 10px; padding-bottom: 6px; border-bottom: 2px solid var(--accent); }
+  h3 { font-size: 1.05rem; margin: 20px 0 6px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; margin: 12px 0; }
+  .warn { background: var(--warn-bg); border-color: var(--warn); }
+  .warn strong { color: var(--warn); }
+  .tip { background: var(--accent-bg); border-color: var(--accent); }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 0.95rem; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  .tablewrap { overflow-x: auto; }
+  kbd, code { background: var(--code); border-radius: 4px; padding: 1px 6px; font-size: 0.92em;
+              font-family: ui-monospace, Menlo, Consolas, monospace; }
+  ol, ul { padding-left: 22px; }
+  li { margin: 3px 0; }
+  .step { display: inline-block; min-width: 2.2em; font-weight: 700; color: var(--accent); }
+  nav ol { columns: 2; column-gap: 24px; }
+  @media (max-width: 560px) { nav ol { columns: 1; } }
+</style>
+</head>
+<body>
+<main>
+<h1>F3X.no tool for RadioMaster TX16S</h1>
+<p class="sub">Setup wizard and pilot setup for gliders (EdgeTX). For TX16S MK3 (800×480) and MK2 (480×272). Needs EdgeTX 2.11 or newer (2.12 recommended). Version 27.10.2026.</p>
+
+<nav class="card">
+<strong>Contents</strong>
+<ol>
+  <li><a href="#elrs">Before you start: ELRS 4 and CH5</a></li>
+  <li><a href="#install">Installation</a></li>
+  <li><a href="#adjust">How to adjust (S1 and S2)</a></li>
+  <li><a href="#channels">Channels</a></li>
+  <li><a href="#menu">Menu items</a></li>
+  <li><a href="#trouble">Troubleshooting</a></li>
+</ol>
+</nav>
+
+<h2 id="elrs">1. Before you start: ELRS 4 and CH5</h2>
+<div class="card warn">
+  <p><strong>Transmitter and receiver must run ExpressLRS 4.</strong> In ELRS 3, CH5 is always the arming channel and is on/off only (−100 / +100). Flap R is on CH5, so it cannot be adjusted smoothly with ELRS 3.</p>
+</div>
+<ol>
+  <li>Update the internal module in the transmitter <em>and</em> all receivers to ELRS 4. Use ExpressLRS Configurator and the same bind phrase on all of them. ELRS 4 and ELRS 3 do not link with each other.</li>
+  <li><kbd>MDL</kbd> → Setup → Internal RF → <strong>Arm using: Switch</strong>, switch <strong>ON</strong>. CH5 then becomes a normal channel. Needs EdgeTX 2.11 or newer.</li>
+  <li>The ExpressLRS menu (SYS → Tools → ExpressLRS): <strong>Packet Rate 100Hz Full</strong> and <strong>Switch Mode 8ch</strong>. With tip servos (CH8/CH9 and up): <strong>16ch /2</strong>.</li>
+  <li>After the change: power-cycle the receiver and check that <strong>C</strong> (connected) shows at the top of the ExpressLRS menu.</li>
+</ol>
+
+<h2 id="install">2. Installation</h2>
+<ol>
+  <li>Connect the radio to the PC/Mac with USB and select <strong>USB Storage (SD)</strong>.</li>
+  <li><strong>If you have an older version:</strong> first delete the folder <code>SCRIPTS/RM</code> and <code>SCRIPTS/TOOLS/F3X.lua</code> / <code>F3X.luac</code>. Keep <code>SCRIPTS/RM/DATA</code> if you want to keep the pilot profile and models. Otherwise the radio may use old compiled <code>.luac</code> files together with the new ones.</li>
+  <li>Copy the folders <code>SCRIPTS</code> and <code>SOUNDS</code> from the package to the root of the SD card (merge with what is there). The voice callouts replace <code>SOUNDS/en/launch.wav</code>, <code>normal.wav</code> and <code>speed.wav</code>.</li>
+  <li>Eject the disk and unplug USB.</li>
+  <li><kbd>SYS</kbd> → Tools → <strong>F3X.no</strong>.</li>
+</ol>
+<p>Start with a <strong>new, empty model</strong>. The wizard overwrites the mixes on the channels it uses (CH1–9 and CH17–21).</p>
+
+<h2 id="adjust">3. How to adjust</h2>
+<div class="card tip">
+  <p><strong>S1 = coarse adjustment, S2 = fine adjustment.</strong> This applies to center, endpoints, throws and all adjustments in menu 6.</p>
+</div>
+<ul>
+  <li><strong>Set S1 and S2 to center</strong> each time a new surface or a new side comes up. Until then the screen shows “Set S1 and S2 to center to start” in red, and nothing changes. This keeps the value from jumping.</li>
+  <li><strong>S1</strong> covers the whole range over half its travel. <strong>S2</strong> fine-tunes a little around the value.</li>
+  <li>If a control is at the end: press <strong>Reset pot</strong> and center both again. The value is held meanwhile.</li>
+  <li><strong>Save / Confirm</strong> saves the value and moves on.</li>
+  <li><strong>PAGE&gt;</strong> and <strong>PAGE&lt;</strong> go to the next and previous surface <em>without saving</em>. The surface gets its previous value back. That way you can adjust one surface without touching the approved ones.</li>
+  <li><strong>Keys 1–6</strong> below the screen jump to channel 1–6 (without saving). In endpoints the same key changes side. The motor is never on the keys.</li>
+  <li>You can also tap a surface on the model picture.</li>
+  <li>In center and endpoints all surfaces are held at center, so you can use the neighbouring surface as a reference.</li>
+</ul>
+
+<h2 id="channels">4. Channels</h2>
+<p>Default, seen from behind:</p>
+<div class="tablewrap">
+<table>
+  <tr><th>Channel</th><th>Cross tail</th><th>V-tail</th></tr>
+  <tr><td>CH1</td><td>Aileron left</td><td>=</td></tr>
+  <tr><td>CH2</td><td>Flap left</td><td>=</td></tr>
+  <tr><td>CH3</td><td>Elevator</td><td>V-tail left</td></tr>
+  <tr><td>CH4</td><td>Rudder</td><td>V-tail right</td></tr>
+  <tr><td>CH5</td><td>Flap right</td><td>=</td></tr>
+  <tr><td>CH6</td><td>Aileron right</td><td>=</td></tr>
+  <tr><td>CH7</td><td>Motor</td><td>=</td></tr>
+  <tr><td>CH8 / CH9</td><td>Tip left / right (6 wing servos)</td><td>=</td></tr>
+</table>
+</div>
+<p>With 2 wing servos, CH1 and CH6 are used and CH2/CH5 are empty.</p>
+<p><strong>Your own channels:</strong> Pilot setup → Change one item → <strong>Channels</strong>. Tap a row for the next channel. Two surfaces cannot share a channel (shown in red). The channels apply to all models on the radio. If you change them, run the wizard (0–5) again for the models. The start page tells you.</p>
+
+<h2 id="menu">5. Menu items</h2>
+<h3>F3X.no (Tools)</h3>
+<table>
+  <tr><td><strong>Setup wizard</strong></td><td>Sets up the model step by step (below).</td></tr>
+  <tr><td><strong>Pilot setup</strong></td><td>Switches and channels for the pilot. Applies to all models.</td></tr>
+  <tr><td><strong>Diagnostics</strong></td><td>Tests the radio's Lua functions. Run it in an empty test model. The result is saved in <code>SCRIPTS/RM/DATA/diag.lua</code>.</td></tr>
+</table>
+
+<h3>Setup wizard</h3>
+<div class="tablewrap">
+<table>
+  <tr><th>Step</th><th>What you do</th></tr>
+  <tr><td><span class="step">P</span> Pilot setup</td><td>Pick the switch for each function by flipping it. Default: SE Thermal/Speed, SD motor on/off, SG motor power, SH trainer/test switch, RS camber, Throttle = butterfly, T3 aileron differential, S1 volume. “Channels” sets the channels.</td></tr>
+  <tr><td><span class="step">0</span> Model config</td><td>2, 4 or 6 wing servos, cross or V-tail, motor and which flight modes are used.</td></tr>
+  <tr><td><span class="step">1</span> Servo direction</td><td>Hold the trainer/test switch (SH): all surfaces should go down, the rudder to the right. Press “Reverse” where it goes the wrong way.</td></tr>
+  <tr><td><span class="step">2</span> Center</td><td>Set each surface neutral with S1/S2. Normal surfaces use PPM center (±500 µs). Flaps use subtrim, and above 100 % it continues in PPM center (up to approx. ±195 %), because the flap neutral can be far towards one end.</td></tr>
+  <tr><td><span class="step">3</span> Endpoints</td><td>One side at a time. The first time, the servo only goes 20 % out from neutral, so it does not hit a stop. Adjust out to the mechanical stop. Above 100 % needs Extended limits.</td></tr>
+  <tr><td><span class="step">4</span> Throws</td><td>Throw per surface and side for aileron, elevator and rudder. Aileron down is 60 % by default (differential).</td></tr>
+  <tr><td><span class="step">E</span> ESC calibration</td><td>Only with a motor. Remove the propeller. Full Throttle, connect the battery, wait for the beeps, then zero Throttle.</td></tr>
+  <tr><td><span class="step">5</span> Write setup</td><td>Writes mixes, curves, flight modes, logical switches, special functions and timers. The first time by hand. After that the setup is written automatically when you leave P, 0, 1, 2, 3, 4 and E. After an update of the scripts, the setup is written again automatically the first time the wizard opens.</td></tr>
+  <tr><td><span class="step">6</span> Adjust</td><td>See below.</td></tr>
+  <tr><td><span class="step">7</span> Checklist</td><td>ELRS 4 (100Hz Full, Arm using: Switch), Extended limits, failsafe, switch warning and alarms for weak signal and low receiver voltage.</td></tr>
+</table>
+</div>
+
+<h3>Menu 6: Adjust</h3>
+<div class="tablewrap">
+<table>
+  <tr><td><strong>Thermal / Speed per surface</strong></td><td>The camber control gives the <strong>least throw forward</strong> and the <strong>most throw back</strong>, in both Thermal and Speed. Order: max on both flaps, then each aileron, then min in the same order; Thermal first, then Speed. Min can be 0 %. All wing surfaces stay at their max (or min) while you adjust, so you can compare by eye.</td></tr>
+  <tr><td><strong>Butterfly (crow)</strong></td><td>Flaps down and ailerons up per surface at full crow, aileron throw at full crow and differential at full crow.</td></tr>
+  <tr><td><strong>Elevator with butterfly</strong></td><td>Curve with 7 points. Move the Throttle stick to the point and adjust. Best done in flight.</td></tr>
+  <tr><td><strong>Aileron → rudder</strong></td><td>Per flight mode. Default 0 %. “Copy to all FM” gives the same value in all.</td></tr>
+  <tr><td><strong>Snap flap</strong></td><td>First max per surface (small, default 20 %), then how much is used in each flight mode (default 0 %). Not in Landing.</td></tr>
+  <tr><td><strong>Aileron → flaps</strong></td><td>Down in % of the flap's down throw and up in % of the flap's up throw, the same for both flaps (default 0 %). While you set down or up, both flaps show that throw, so it can be measured. Then how much of it is used in each flight mode: 100 % = exactly the throw you set for down and up (default 100 %, Landing 0 %).</td></tr>
+  <tr><td><strong>Motor</strong></td><td>Motor level Low/Medium/Full and motor → elevator.</td></tr>
+</table>
+</div>
+<p><strong>Hold SH in</strong> (the trainer/test switch) in step 4 and menu 6, and all surfaces go to center. This is handy for comparing with neutral. It needs a few free mixes. If the model is nearly full, the hint “Hold SH in” is not shown on the screen.</p>
+<p>The values per flight mode apply to the flight mode the radio is in. Change flight mode with the switch while adjusting. The aileron differential is set with trim T3 in flight, with its own value per flight mode.</p>
+
+<h3>Flight modes</h3>
+<p>Normal (FM0) when no other is on. Landing (FM1) comes on at 10 % crow and cuts the motor. The motor stays locked until the motor switch is set to off again. Speed (FM3) and Thermal (FM4) on their own switch. With a motor: separate flight modes per motor step with their own elevator trim. English voice callouts when the mode changes.</p>
+
+<h2 id="trouble">6. Troubleshooting</h2>
+<div class="tablewrap">
+<table>
+  <tr><th>Problem</th><th>Solution</th></tr>
+  <tr><td>CH5 is on/off only</td><td>ELRS 3, or Arm using is set to CH5. See section 1.</td></tr>
+  <tr><td>Nothing happens when I turn the pot</td><td>Set S1 and S2 to center (red message on the screen).</td></tr>
+  <tr><td>A surface follows the stick while adjusting</td><td>The model has used all 64 mixes. The screen tells you. Delete mixes on channels the wizard does not use (for example CH10–16 from a default template).</td></tr>
+  <tr><td>The flap will not go flush</td><td>Above approx. 195 % the servo arm must be moved one spline.</td></tr>
+  <tr><td>A surface is slightly off center after the wizard</td><td>Check the channel monitor. If the channel is not at 0 %, a mix is active: flight mode, camber control, crow or trim.</td></tr>
+  <tr><td>The start page says the channels have changed</td><td>Run 0–5 again for the model.</td></tr>
+  <tr><td>“F3X.no needs EdgeTX 2.11 or newer”</td><td>Update the radio with EdgeTX Buddy (buddy.edgetx.org), 2.12 recommended.</td></tr>
+</table>
+</div>
+<h2 id="report">7. Report errors – and what is coming</h2>
+<p>This English version is translated from Norwegian. If you find errors in the text or in the code, or something that does not work on your radio, please open an <strong>Issue</strong> at <a href="https://github.com/StigMOlsen/F3X.no-EdgeTX/issues">github.com/StigMOlsen/F3X.no-EdgeTX</a>. Tell us your radio and EdgeTX version and which step it is about. A photo of the screen helps a lot.</p>
+<p><strong>M-tail</strong> support is on its way, but not ready yet.</p>
+</main>
+</body>
+</html>

@@ -1,0 +1,26 @@
+F3X.no – lisens: gratis bruk, ikke endring eller deling
+
+Copyright (c) 2026 Stig Magne Olsen (F3X.no). Alle rettigheter forbeholdt.
+
+Du kan laste ned og bruke F3X.no gratis, på dine egne radioer og til eget bruk.
+
+Det er ikke tillatt å
+- endre, oversette eller lage egne versjoner av programmet eller filene,
+- dele, selge, publisere eller distribuere programmet videre, helt eller delvis,
+  i original eller endret form (del heller lenken til
+  https://github.com/StigMOlsen/F3X.no-EdgeTX),
+- fjerne eller endre denne lisensen eller opphavsmerkingen.
+
+Programmet leveres «som det er», uten noen form for garanti. Opphavspersonen er
+ikke ansvarlig for skade eller tap som følge av bruken, heller ikke skade på
+modeller, utstyr eller personer. Sjekk alltid ror, retninger og failsafe før
+flyging.
+
+Ønsker du å bruke programmet på andre måter, ta kontakt med F3X.no.
+
+---
+
+English summary: Copyright (c) 2026 Stig Magne Olsen (F3X.no). All rights
+reserved. Free to download and use for personal use. Modification, translation
+and redistribution (in original or modified form) are not permitted – share the
+link instead. Provided "as is", without warranty of any kind.
