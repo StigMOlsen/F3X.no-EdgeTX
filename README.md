@@ -46,5 +46,6 @@ og er lite prøvd på ekte radio. Tilbakemeldinger: åpne en *Issue* her på Git
 
 ## Lisens
 
-[MIT](LICENSE) – fritt å bruke, endre og dele videre, også i egne versjoner, så lenge lisensteksten
-følger med. Ingen garanti: sjekk alltid ror, retninger og failsafe før flyging.
+Gratis å laste ned og bruke til eget bruk. **Det er ikke tillatt å endre eller dele programmet
+videre** – del heller lenken til dette repoet. Se [LICENSE](LICENSE). Ingen garanti: sjekk alltid
+ror, retninger og failsafe før flyging.
