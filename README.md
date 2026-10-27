@@ -43,3 +43,8 @@ lagre, knapp 1–6 henter kanal 1–6. Hold SH inne i justeringene for å sette 
 
 Brukt på TX16S MK3 med EdgeTX 2.12.5 og ER8-mottaker. MK2-versjonen er samme kode, skalert ned,
 og er lite prøvd på ekte radio. Tilbakemeldinger: åpne en *Issue* her på GitHub.
+
+## Lisens
+
+[MIT](LICENSE) – fritt å bruke, endre og dele videre, også i egne versjoner, så lenge lisensteksten
+følger med. Ingen garanti: sjekk alltid ror, retninger og failsafe før flyging.
