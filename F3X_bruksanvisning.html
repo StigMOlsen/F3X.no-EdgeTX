@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>F3X-verktøyet – bruksanvisning</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --text: #1d232a; --muted: #5d6873; --line: #dde2e7;
+    --accent: #c4561a; --accent-bg: #fbece3; --warn: #b3261e; --warn-bg: #fdecea; --ok: #2e7d4f;
+    --code: #eef1f4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #11161b; --card: #1a2128; --text: #e6eaee; --muted: #9aa6b2; --line: #2c3640;
+      --accent: #f39c50; --accent-bg: #33241a; --warn: #ff8a80; --warn-bg: #3a1f1d; --ok: #6fcf97;
+      --code: #232c35;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 1.7rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  h2 { font-size: 1.25rem; margin: 32px 0 10px; padding-bottom: 6px; border-bottom: 2px solid var(--accent); }
+  h3 { font-size: 1.05rem; margin: 20px 0 6px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; margin: 12px 0; }
+  .warn { background: var(--warn-bg); border-color: var(--warn); }
+  .warn strong { color: var(--warn); }
+  .tip { background: var(--accent-bg); border-color: var(--accent); }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 0.95rem; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  .tablewrap { overflow-x: auto; }
+  kbd, code { background: var(--code); border-radius: 4px; padding: 1px 6px; font-size: 0.92em;
+              font-family: ui-monospace, Menlo, Consolas, monospace; }
+  ol, ul { padding-left: 22px; }
+  li { margin: 3px 0; }
+  .step { display: inline-block; min-width: 2.2em; font-weight: 700; color: var(--accent); }
+  nav ol { columns: 2; column-gap: 24px; }
+  @media (max-width: 560px) { nav ol { columns: 1; } }
+</style>
+</head>
+<body>
+<main>
+<h1>F3X-verktøyet for RadioMaster TX16S</h1>
+<p class="sub">Oppsettveiviser og pilotoppsett for seilfly (EdgeTX). Gjelder TX16S MK3 (800×480) og MK2 (480×272). Krever EdgeTX 2.11 eller nyere (anbefalt 2.12). Versjon 26.10.2026.</p>
+
+<nav class="card">
+<strong>Innhold</strong>
+<ol>
+  <li><a href="#elrs">Før du starter: ELRS 4 og CH5</a></li>
+  <li><a href="#install">Installasjon</a></li>
+  <li><a href="#justering">Slik justerer du (S1 og S2)</a></li>
+  <li><a href="#kanaler">Kanaler</a></li>
+  <li><a href="#meny">Menyvalgene</a></li>
+  <li><a href="#feil">Feilsøking</a></li>
+</ol>
+</nav>
+
+<h2 id="elrs">1. Før du starter: ELRS 4 og CH5</h2>
+<div class="card warn">
+  <p><strong>Sender og mottaker må ha ExpressLRS 4.</strong> I ELRS 3 er CH5 alltid armeringskanalen og går bare av/på (−100 / +100). Flap H ligger på CH5, så den kan ikke justeres trinnløst med ELRS 3.</p>
+</div>
+<ol>
+  <li>Oppdater den interne modulen i senderen <em>og</em> alle mottakerne til ELRS 4. Bruk ExpressLRS Configurator og samme bind phrase på alle. ELRS 4 og ELRS 3 får ikke link med hverandre.</li>
+  <li><kbd>MDL</kbd> → Setup → Internal RF → <strong>Arm using: Switch</strong>, bryter <strong>ON</strong>. Da blir CH5 en vanlig kanal. Krever EdgeTX 2.11 eller nyere.</li>
+  <li>ExpressLRS-menyen (SYS → Tools → ExpressLRS): <strong>Packet Rate 100Hz Full</strong> og <strong>Switch Mode 8ch</strong>. Med tip-servoer (CH8/CH9 og mer): <strong>16ch /2</strong>.</li>
+  <li>Etter endringen: slå strømmen av og på på mottakeren, og sjekk at <strong>C</strong> (connected) står øverst i ExpressLRS-menyen.</li>
+</ol>
+
+<h2 id="install">2. Installasjon</h2>
+<ol>
+  <li>Koble radioen til PC/Mac med USB og velg <strong>USB Storage (SD)</strong>.</li>
+  <li><strong>Har du en eldre versjon:</strong> slett mappen <code>SCRIPTS/RM</code> og <code>SCRIPTS/TOOLS/F3X.lua</code> / <code>F3X.luac</code> først. Ta vare på <code>SCRIPTS/RM/DATA</code> hvis du vil beholde pilotprofil og modeller. Ellers kan radioen bruke gamle kompilerte <code>.luac</code>-filer sammen med de nye.</li>
+  <li>Kopier mappene <code>SCRIPTS</code> og <code>SOUNDS</code> fra pakken til roten på SD-kortet (slå sammen med det som finnes). De norske stemmeutropene erstatter <code>SOUNDS/en/launch.wav</code>, <code>normal.wav</code> og <code>speed.wav</code>.</li>
+  <li>Løs ut disken og trekk ut USB.</li>
+  <li><kbd>SYS</kbd> → Tools → <strong>F3X.no</strong>.</li>
+</ol>
+<p>Start med en <strong>ny, tom modell</strong>. Veiviseren skriver over mikser på kanalene den bruker (CH1–9 og CH17–21).</p>
+
+<h2 id="justering">3. Slik justerer du</h2>
+<div class="card tip">
+  <p><strong>S1 = grov justering, S2 = fin justering.</strong> Det gjelder senter, endepunkter, utslag og alle justeringene i meny 6.</p>
+</div>
+<ul>
+  <li><strong>Sett S1 og S2 i midten</strong> hver gang et nytt ror eller en ny side kommer opp. Til da står det med rød skrift «Sett S1 og S2 i midten for å starte», og ingenting endres. Det hindrer at verdien hopper.</li>
+  <li><strong>S1</strong> dekker hele området på en halv vandring. <strong>S2</strong> finjusterer litt rundt verdien.</li>
+  <li>Står en kontroll i enden: trykk <strong>Nullstill pot</strong> og sett begge i midten igjen. Verdien holdes imens.</li>
+  <li><strong>Lagre / Bekreft</strong> lagrer verdien og går videre.</li>
+  <li><strong>PAGE&gt;</strong> og <strong>PAGE&lt;</strong> går til neste og forrige ror <em>uten å lagre</em>. Roret får tilbake verdien det hadde. Da kan du justere ett ror uten å røre de godkjente.</li>
+  <li><strong>Knapp 1–6</strong> under skjermen hopper til kanal 1–6 (uten å lagre). I endepunkter bytter samme knapp side. Motoren ligger aldri på knappene.</li>
+  <li>Du kan også trykke på et ror på flyfiguren.</li>
+  <li>I senter og endepunkter står alle rorene stille i senter, så du kan bruke nabororet som mål.</li>
+</ul>
+
+<h2 id="kanaler">4. Kanaler</h2>
+<p>Standard, sett bakfra:</p>
+<div class="tablewrap">
+<table>
+  <tr><th>Kanal</th><th>Kryss-hale</th><th>V-hale</th></tr>
+  <tr><td>CH1</td><td>Aileron venstre</td><td>=</td></tr>
+  <tr><td>CH2</td><td>Flap venstre</td><td>=</td></tr>
+  <tr><td>CH3</td><td>Høyderor</td><td>V-hale venstre</td></tr>
+  <tr><td>CH4</td><td>Sideror</td><td>V-hale høyre</td></tr>
+  <tr><td>CH5</td><td>Flap høyre</td><td>=</td></tr>
+  <tr><td>CH6</td><td>Aileron høyre</td><td>=</td></tr>
+  <tr><td>CH7</td><td>Motor</td><td>=</td></tr>
+  <tr><td>CH8 / CH9</td><td>Tip venstre / høyre (6 vingeservoer)</td><td>=</td></tr>
+</table>
+</div>
+<p>Med 2 vingeservoer brukes CH1 og CH6, og CH2/CH5 står tomme.</p>
+<p><strong>Egne kanaler:</strong> Pilotoppsett → Endre enkeltvalg → <strong>Kanaler</strong>. Trykk på en rad for neste kanal. To ror kan ikke ha samme kanal (vises rødt). Kanalene gjelder alle modellene på radioen. Endrer du dem, må veiviseren (0–5) kjøres på nytt for modellene. Startsiden sier fra.</p>
+
+<h2 id="meny">5. Menyvalgene</h2>
+<h3>F3X.no (Tools)</h3>
+<table>
+  <tr><td><strong>Oppsettveiviser</strong></td><td>Setter opp modellen steg for steg (under).</td></tr>
+  <tr><td><strong>Pilotoppsett</strong></td><td>Brytere og kanaler for piloten. Gjelder alle modellene.</td></tr>
+  <tr><td><strong>Diagnose</strong></td><td>Tester radioens Lua-funksjoner. Kjør i en tom testmodell. Resultatet lagres i <code>SCRIPTS/RM/DATA/diag.lua</code>.</td></tr>
+</table>
+
+<h3>Oppsettveiviseren</h3>
+<div class="tablewrap">
+<table>
+  <tr><th>Steg</th><th>Hva du gjør</th></tr>
+  <tr><td><span class="step">P</span> Pilotoppsett</td><td>Velg bryter for hver funksjon ved å flippe den. Standard: SE Termikk/Speed, SD motor av/på, SG motorkraft, SH lære-/testbryter, RS camber, Throttle = butterfly, T3 aileron-differensial, S1 volum. «Kanaler» setter kanalene.</td></tr>
+  <tr><td><span class="step">0</span> Flykonfigurasjon</td><td>2, 4 eller 6 vingeservoer, kryss- eller V-hale, motor og hvilke flymoduser som brukes.</td></tr>
+  <tr><td><span class="step">1</span> Servoretning</td><td>Hold lære-/testbryteren (SH) inne: alle ror skal gå ned, sideroret til høyre. Trykk «Reverser» der det går feil vei.</td></tr>
+  <tr><td><span class="step">2</span> Senter</td><td>Still hvert ror nøytralt med S1/S2. Vanlige ror bruker PPM-senter (±500 µs). Flaps bruker subtrim, og over 100 % fortsetter det i PPM-senter (til ca. ±195 %), fordi flappens nøytral kan ligge langt ut mot den ene enden.</td></tr>
+  <tr><td><span class="step">3</span> Endepunkter</td><td>Én side om gangen. Første gang går servoen bare 20 % ut fra nøytral, så den ikke går mot stopp. Juster ut til mekanisk stopp. Over 100 % krever Extended limits.</td></tr>
+  <tr><td><span class="step">4</span> Utslag</td><td>Utslag per ror og side for aileron, høyderor og sideror. Aileron ned er 60 % som standard (differensial).</td></tr>
+  <tr><td><span class="step">E</span> ESC-kalibrering</td><td>Bare med motor. Ta av propellen. Full Throttle, koble til batteriet, vent på pip, så null Throttle.</td></tr>
+  <tr><td><span class="step">5</span> Skriv oppsett</td><td>Skriver mikser, kurver, flymoduser, logiske brytere, spesialfunksjoner og timere. Første gang for hånd. Etter det skrives oppsettet automatisk når du går ut av P, 0, 1, 2, 3, 4 og E. Etter en oppdatering av skriptene skrives oppsettet på nytt automatisk første gang veiviseren åpnes.</td></tr>
+  <tr><td><span class="step">6</span> Justering</td><td>Se under.</td></tr>
+  <tr><td><span class="step">7</span> Sjekkliste</td><td>ELRS 4 (100Hz Full, Arm using: Switch), Extended limits, failsafe, bryteradvarsel og alarmer for svakt signal og lav mottakerspenning.</td></tr>
+</table>
+</div>
+
+<h3>Meny 6: Justering</h3>
+<div class="tablewrap">
+<table>
+  <tr><td><strong>Termikk / Speed per ror</strong></td><td>Camber-kontrollen gir <strong>minst utslag fram</strong> og <strong>mest utslag bak</strong>, både i Termikk og Speed. Rekkefølge: maks på begge flaps, så hvert aileron, så min i samme rekkefølge; først Termikk, så Speed. Min kan være 0 %. Alle vingerorene står på sin maks (eller min) mens du justerer, så du kan sammenligne med øyemål.</td></tr>
+  <tr><td><strong>Butterfly (crow)</strong></td><td>Flaps ned og ailerons opp per ror ved full crow, aileron-utslag ved full crow og differensial ved full crow.</td></tr>
+  <tr><td><strong>Høyderor ved butterfly</strong></td><td>Kurve med 7 punkter. Flytt Throttle-stikka til punktet og juster. Best i lufta.</td></tr>
+  <tr><td><strong>Aileron → sideror</strong></td><td>Per flymodus. Standard 0 %. «Kopier alle FM» gir samme verdi i alle.</td></tr>
+  <tr><td><strong>Kikkflapp</strong></td><td>Først maks per ror (liten, standard 20 %), så hvor mye som brukes i hver flymodus (standard 0 %). Ikke i Landing.</td></tr>
+  <tr><td><strong>Aileron → flaps</strong></td><td>Ned i % av flappens utslag ned og opp i % av flappens utslag opp, likt for begge flaps (standard 0 %). Mens du stiller ned eller opp, står begge flapsene på det utslaget, så det kan måles. Så hvor mye av dette som brukes i hver flymodus: 100 % = nøyaktig utslaget du satte i ned og opp (standard 100 %, Landing 0 %).</td></tr>
+  <tr><td><strong>Motor</strong></td><td>Motornivå Liten/Medium/Full og motor → høyderor.</td></tr>
+</table>
+</div>
+<p><strong>Hold SH inne</strong> (lære-/testbryteren) i steg 4 og meny 6, så står alle rorene i senter. Det er nyttig for å sammenligne mot nøytral. Det krever noen få ledige mikser. Er modellen nesten full, vises ikke hintet «Hold SH inne» på skjermen.</p>
+<p>Verdiene per flymodus gjelder den flymodusen radioen står i. Bytt flymodus med bryteren mens du justerer. Aileron-differensialen stilles med trimmen T3 i lufta, med egen verdi per flymodus.</p>
+
+<h3>Flymoduser</h3>
+<p>Normal (FM0) når ingen annen er på. Landing (FM1) slår inn ved 10 % crow og kutter motoren. Motoren er sperret til motorbryteren settes av igjen. Speed (FM3) og Termikk (FM4) på egen bryter. Med motor: egne flymoduser per motortrinn med eget høyderorstrim. Norske stemmeutrop ved bytte.</p>
+
+<h2 id="feil">6. Feilsøking</h2>
+<div class="tablewrap">
+<table>
+  <tr><th>Problem</th><th>Løsning</th></tr>
+  <tr><td>CH5 går bare av/på</td><td>ELRS 3, eller Arm using står på CH5. Se punkt 1.</td></tr>
+  <tr><td>Ingenting skjer når jeg vrir</td><td>Sett S1 og S2 i midten (rød beskjed på skjermen).</td></tr>
+  <tr><td>Et ror følger stikka under justering</td><td>Modellen har brukt alle 64 mikser. Skjermen sier fra. Slett mikser på kanaler veiviseren ikke bruker (for eksempel CH10–16 fra en standardmal).</td></tr>
+  <tr><td>Flappen kommer ikke i flukt</td><td>Over ca. 195 % må servoarmen flyttes ett hakk.</td></tr>
+  <tr><td>Ror står litt ut av senter etter veiviseren</td><td>Sjekk kanalmonitoren. Står kanalen ikke på 0 %, er det en miks: flymodus, camber-kontroll, crow eller trim.</td></tr>
+  <tr><td>Startsiden sier at kanalene er endret</td><td>Kjør 0–5 på nytt for modellen.</td></tr>
+</table>
+</div>
+</main>
+</body>
+</html>

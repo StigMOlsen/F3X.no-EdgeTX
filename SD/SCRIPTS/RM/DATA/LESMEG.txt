@@ -1,0 +1,2 @@
+Her lagrer veiviseren pilotprofilen (pilot.lua) og fremdrift per modell (m_<modellnavn>.lua).
+Mappen maa finnes paa SD-kortet.
