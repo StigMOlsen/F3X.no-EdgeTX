@@ -66,7 +66,7 @@
 <ol>
   <li>Oppdater den interne modulen i senderen <em>og</em> alle mottakerne til ELRS 4. Bruk ExpressLRS Configurator og samme bind phrase på alle. ELRS 4 og ELRS 3 får ikke link med hverandre.</li>
   <li><kbd>MDL</kbd> → Setup → Internal RF → <strong>Arm using: Switch</strong>, bryter <strong>ON</strong>. Da blir CH5 en vanlig kanal. Krever EdgeTX 2.11 eller nyere.</li>
-  <li>ExpressLRS-menyen (SYS → Tools → ExpressLRS): <strong>Packet Rate 100Hz Full</strong> og <strong>Switch Mode 8ch</strong>. Med tip-servoer (CH8/CH9 og mer): <strong>16ch /2</strong>.</li>
+  <li>ExpressLRS-menyen (SYS → Tools → ExpressLRS): <strong>Packet Rate 100Hz Full</strong> og <strong>Switch Mode 8ch</strong>.</li>
   <li>Etter endringen: slå strømmen av og på på mottakeren, og sjekk at <strong>C</strong> (connected) står øverst i ExpressLRS-menyen.</li>
 </ol>
 
@@ -107,7 +107,7 @@
   <tr><td>CH5</td><td>Flap høyre</td><td>=</td></tr>
   <tr><td>CH6</td><td>Aileron høyre</td><td>=</td></tr>
   <tr><td>CH7</td><td>Motor</td><td>=</td></tr>
-  <tr><td>CH8 / CH9</td><td>Tip venstre / høyre (6 vingeservoer)</td><td>=</td></tr>
+  <tr><td>CH8</td><td>Ekstra av/på (f.eks. VifFly2), valgfri: velg bryter i pilotoppsettet («Ekstra kanal av/på»). Uten bryter rører veiviseren ikke CH8.</td><td>=</td></tr>
 </table>
 </div>
 <p>Med 2 vingeservoer brukes CH1 og CH6, og CH2/CH5 står tomme.</p>
@@ -126,16 +126,16 @@
 <div class="tablewrap">
 <table>
   <tr><th>Steg</th><th>Hva du gjør</th></tr>
-  <tr><td><span class="step">P</span> Pilotoppsett</td><td>Velg bryter for hver funksjon ved å flippe den. Standard: SE Termikk/Speed, SD motor av/på, SG motorkraft, SH lære-/testbryter, RS camber, Throttle = butterfly, T3 aileron-differensial, S1 volum. «Kanaler» setter kanalene.</td></tr>
-  <tr><td><span class="step">0</span> Flykonfigurasjon</td><td>2, 4 eller 6 vingeservoer, kryss- eller V-hale, motor og hvilke flymoduser som brukes.</td></tr>
+  <tr><td><span class="step">P</span> Pilotoppsett</td><td>Velg bryter for hver funksjon ved å flippe den. Standard: SE Termikk/Speed, SD motor av/på, SG motorkraft, SH lære-/testbryter, RS camber, Throttle = butterfly, T3 aileron-differensial, S1 volum. Valgfritt: vario av/på og ekstra kanal av/på (CH8, −100 % av / +100 % på). «Kanaler» setter kanalene.</td></tr>
+  <tr><td><span class="step">0</span> Flykonfigurasjon</td><td>2 eller 4 vingeservoer, kryss- eller V-hale, motor og hvilke flymoduser som brukes.</td></tr>
   <tr><td><span class="step">1</span> Servoretning</td><td>Hold lære-/testbryteren (SH) inne: alle ror skal gå ned, sideroret til høyre. Trykk «Reverser» der det går feil vei.</td></tr>
   <tr><td><span class="step">2</span> Senter</td><td>Still hvert ror nøytralt med S1/S2. Vanlige ror bruker PPM-senter (±500 µs). Flaps bruker subtrim, og over 100 % fortsetter det i PPM-senter (til ca. ±195 %), fordi flappens nøytral kan ligge langt ut mot den ene enden.</td></tr>
   <tr><td><span class="step">3</span> Endepunkter</td><td>Én side om gangen. Første gang går servoen bare 20 % ut fra nøytral, så den ikke går mot stopp. Juster ut til mekanisk stopp. Over 100 % krever Extended limits.</td></tr>
   <tr><td><span class="step">4</span> Utslag</td><td>Utslag per ror og side for aileron, høyderor og sideror. Aileron ned er 60 % som standard (differensial).</td></tr>
-  <tr><td><span class="step">E</span> ESC-kalibrering</td><td>Bare med motor. Ta av propellen. Full Throttle, koble til batteriet, vent på pip, så null Throttle.</td></tr>
+  <tr><td><span class="step">E</span> ESC-kalibrering</td><td>Bare med motor. Ta av propellen. Full Throttle (1998 µs), koble til batteriet, vent på pip, så null Throttle (1003 µs).</td></tr>
   <tr><td><span class="step">5</span> Skriv oppsett</td><td>Skriver mikser, kurver, flymoduser, logiske brytere, spesialfunksjoner og timere. Første gang for hånd. Etter det skrives oppsettet automatisk når du går ut av P, 0, 1, 2, 3, 4 og E. Etter en oppdatering av skriptene skrives oppsettet på nytt automatisk første gang veiviseren åpnes.</td></tr>
   <tr><td><span class="step">6</span> Justering</td><td>Se under.</td></tr>
-  <tr><td><span class="step">7</span> Sjekkliste</td><td>ELRS 4 (100Hz Full, Arm using: Switch), Extended limits, failsafe, bryteradvarsel og alarmer for svakt signal og lav mottakerspenning.</td></tr>
+  <tr><td><span class="step">7</span> Sjekkliste</td><td>ELRS 4 (100Hz Full, Arm using: Switch), Extended limits, failsafe, Throttle-advarsel av og bryteradvarsel på motorbryteren, og alarmer for svakt signal og lav mottakerspenning.</td></tr>
 </table>
 </div>
 
@@ -159,7 +159,7 @@
 <div class="tablewrap">
 <table>
   <tr><td><strong>Flytid</strong></td><td>Starter ved første motor på og teller ned fra 10 min (eller 15 min, knappen «Flytid» før start). Stemme hvert minutt, med en trudelutt før «2 minutter» igjen, hvert 10. sekund fra 1 minutt igjen og hvert sekund fra 25. Etter 0 teller den videre (vises som +m:ss i rødt).</td></tr>
-  <tr><td><strong>Motor</strong></td><td>Motortiden teller ned fra 30 s mens motoren går (20, 40 eller 60 s med knappen «Motor»). Stemme hvert 5. sekund og hvert sekund de 7 siste. Stopper på 0.</td></tr>
+  <tr><td><strong>Motor</strong></td><td>Motortiden teller ned fra 30 s mens motoren går (20, 40 eller 60 s med knappen «Motor»). Stemme hvert 5. sekund og hvert sekund de 7 siste. Stopper på 0. Står motorbryteren fortsatt på når tiden er ute, sier radioen «motor» hvert 10. sekund og skjermen viser <em>MOTOR AV!</em> til motoren slås av.</td></tr>
   <tr><td><strong>Etter motorkutt</strong></td><td>Teller ned 10 s fra motoren stoppes eller motortiden går ut (det som kommer først), med stemme som motortiden (hvert sekund de 7 siste) og en pipetone på 0. Stopper på 0.</td></tr>
   <tr><td><strong>Batteri</strong></td><td>Øverst til høyre: flybatteriet hvis en sensor gir det (VFAS eller Bat), ellers RxBt. <strong>Motorbatteri:</strong> ER8 sender motorbatteriet som RxBt når spenningsledningen (fulgte med mottakeren) er koblet til batteriet – mottakeren velger inngang selv (4–35 V). Over 6 V vises «Motorbatteri» med celletall (regnes når motoren står) og volt per celle: oransje under 3,7 V, rød under 3,5 V. Juster offset/ratio på RxBt under MDL → Telemetry så verdien stemmer med et voltmeter. Uten ledningen er RxBt mottakerspenningen (rød under 4,5 V). I flyloggen står batterispenningen ved motorkutt og laveste spenning per celle.</td></tr>
   <tr><td><strong>Link</strong></td><td>Under batteriet: RQly i % med stolpe (grønn over 80, oransje under, rød under 50) og RSSI. «INGEN LINK» i rødt når telemetrien er borte.</td></tr>

@@ -32,15 +32,15 @@ Start med en ny, tom modell. Veiviseren skriver over mikser på kanalene den bru
 
 ## Kanaler (standard, kan endres i pilotoppsettet)
 
-| CH1 | CH2 | CH3 | CH4 | CH5 | CH6 | CH7 | CH8/9 |
+| CH1 | CH2 | CH3 | CH4 | CH5 | CH6 | CH7 | CH8 |
 |---|---|---|---|---|---|---|---|
-| Ail V | Flap V | Elev / V-hale V | Rud / V-hale H | Flap H | Ail H | Motor | Tip V/H |
+| Ail V | Flap V | Elev / V-hale V | Rud / V-hale H | Flap H | Ail H | Motor | Ekstra av/på (valgfri) |
 
 ## Flightscreen
 
 **F3X.no → Flightscreen** under flyging: flytid fra motor på (nedtelling 10 eller 15 min, stemme
 hvert minutt, trudelutt ved 2 min, hvert 10. s fra 1 min og hvert sekund fra 25), motortid
-(30 s, stemme hvert 5. s og de 7 siste), 10 s nedtelling etter motorkutt, motorbatteri (celletall
+(30 s, stemme hvert 5. s og de 7 siste, «motor» hvert 10. s hvis motoren står på etter tiden), 10 s nedtelling etter motorkutt, motorbatteri (celletall
 og V per celle) og link-kvalitet. Hendelsene logges til `LOGS/F3X_<modell>_<dato>.txt`.
 
 ## Justering

@@ -49,7 +49,10 @@ return function(L, STD)
   -- Kort tekst som endres når kanalene endres (for å se om modellen må settes opp på nytt)
   function P.channelSig(p)
     local t = {}
-    for _, r in ipairs(STD.chRoles) do t[#t + 1] = (p.ch and p.ch[r.key]) or CH_DEFAULT[r.key] end
+    -- Ekstra av/på-kanal er ikke med: å flytte den krever ikke steg 0-5 på nytt, bare ny skriving
+    for _, r in ipairs(STD.chRoles) do
+      if r.key ~= "aux" then t[#t + 1] = (p.ch and p.ch[r.key]) or CH_DEFAULT[r.key] end
+    end
     return table.concat(t, ",")
   end
 

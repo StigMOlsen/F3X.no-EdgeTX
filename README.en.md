@@ -32,15 +32,15 @@ Start with a new, empty model. The wizard overwrites mixes on the channels it us
 
 ## Channels (default, can be changed in the pilot setup)
 
-| CH1 | CH2 | CH3 | CH4 | CH5 | CH6 | CH7 | CH8/9 |
+| CH1 | CH2 | CH3 | CH4 | CH5 | CH6 | CH7 | CH8 |
 |---|---|---|---|---|---|---|---|
-| Ail L | Flap L | Elev / V-tail L | Rud / V-tail R | Flap R | Ail R | Motor | Tip L/R |
+| Ail L | Flap L | Elev / V-tail L | Rud / V-tail R | Flap R | Ail R | Motor | Extra on/off (optional) |
 
 ## Flightscreen
 
 **F3X.no → Flightscreen** while flying: flight time from motor on (countdown 10 or 15 min, voice
 every minute, a jingle at 2 min, every 10 s from 1 min and every second from 25), motor time
-(30 s, voice every 5 s and the last 7), 10 s countdown after motor cut, motor battery (cell count
+(30 s, voice every 5 s and the last 7, «motor» every 10 s if the motor is left on after the time), 10 s countdown after motor cut, motor battery (cell count
 and V per cell) and link quality. Events are logged to `LOGS/F3X_<model>_<date>.txt`.
 
 ## Adjusting

@@ -618,7 +618,7 @@ return function(L, STD, W, S)
       local t
       if s.step == 0 then
         t = { "REMOVE THE PROPELLER before you start.", "The flight battery must be disconnected.",
-              "Start: the channel goes to FULL Throttle and endpoints are set to 100 %." }
+              "Start: the channel goes to FULL Throttle (1998 us). Zero Throttle is 1003 us." }
       elseif s.step == 1 then
         t = { "Full Throttle is being sent.", "Connect the flight battery and wait for the ESC beeps.", "Press Next for zero Throttle." }
       else
@@ -630,7 +630,7 @@ return function(L, STD, W, S)
       local items = { { "Cancel", cancel } }
       if s.step == 0 then
         items[2] = { "Start (full Throttle)", function()
-          L.setOutput(mch - 1, { min = -1000, max = 1000, ppmCenter = 0 })
+          L.setOutput(mch - 1, { min = V.motorMin, max = V.motorMax, ppmCenter = 0 })
           set(100)
           s.step = 1
         end }
@@ -658,13 +658,13 @@ return function(L, STD, W, S)
   A.CHECKS = {
     { "bind", "Receiver bound (ELRS)" },
     { "range", "Range check done" },
-    { "fullres", "ELRS 4: 100Hz Full, 8ch (16ch/2 with tips)" },
+    { "fullres", "ELRS 4: 100Hz Full, 8ch" },
     { "telem", "ELRS: Telem Ratio is not Race" },
     { "bindsto", "ELRS RX: Bind Storage = Persistent" },
     { "arm", "Arm using: Switch, ON (CH5 becomes normal)" },
     { "ext", "Extended limits on (MODEL SETUP)" },
     { "failsafe", "Failsafe: Custom, motor -100 %, surfaces neutral" },
-    { "swwarn", "Switch warning: motor switch Off at power-up" },
+    { "swwarn", "Throttle warning off, motor switch Off at start" },
     { "sounds", "Sound files are in /SOUNDS/<language>/" },
   }
 

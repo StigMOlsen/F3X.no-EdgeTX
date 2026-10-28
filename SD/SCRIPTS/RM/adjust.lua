@@ -618,7 +618,7 @@ return function(L, STD, W, S)
       local t
       if s.step == 0 then
         t = { "TA AV PROPELLEN før du starter.", "Flybatteriet skal være frakoblet.",
-              "Start: kanalen går til FULL Throttle og endepunktene settes til 100 %." }
+              "Start: kanalen går til FULL Throttle (1998 us). Null Throttle er 1003 us." }
       elseif s.step == 1 then
         t = { "Full Throttle sendes nå.", "Koble til flybatteriet og vent på pipene fra ESC-en.", "Trykk Neste for null Throttle." }
       else
@@ -630,7 +630,7 @@ return function(L, STD, W, S)
       local items = { { "Avbryt", cancel } }
       if s.step == 0 then
         items[2] = { "Start (full Throttle)", function()
-          L.setOutput(mch - 1, { min = -1000, max = 1000, ppmCenter = 0 })
+          L.setOutput(mch - 1, { min = V.motorMin, max = V.motorMax, ppmCenter = 0 })
           set(100)
           s.step = 1
         end }
@@ -658,13 +658,13 @@ return function(L, STD, W, S)
   A.CHECKS = {
     { "bind", "Mottaker bundet (ELRS)" },
     { "range", "Rekkeviddetest gjort" },
-    { "fullres", "ELRS 4: 100Hz Full, 8ch (16ch/2 med tip)" },
+    { "fullres", "ELRS 4: 100Hz Full, 8ch" },
     { "telem", "ELRS: Telem Ratio er ikke Race" },
     { "bindsto", "ELRS RX: Bind Storage = Persistent" },
     { "arm", "Arm using: Switch, ON (CH5 blir vanlig)" },
     { "ext", "Extended limits på (MODEL SETUP)" },
     { "failsafe", "Failsafe: Custom, motor -100 %, ror nøytrale" },
-    { "swwarn", "Bryteradvarsel: motorbryter Off ved oppstart" },
+    { "swwarn", "Throttle-advarsel av, motorbryter Off ved start" },
     { "sounds", "Lydfilene ligger i /SOUNDS/<språk>/" },
   }
 

@@ -6,22 +6,23 @@ return {
   version = "0.2",
   -- Øk når mikserne, kurvene eller bryterne som skrives endres: et oppsett skrevet med en
   -- eldre versjon skrives da på nytt automatisk når veiviseren eller meny 6 åpnes.
-  planVersion = 4,   -- 4: timerne uten minuttpip (flyskjermen gir stemmen)
+  planVersion = 6,   -- 4: timerne uten minuttpip (flyskjermen gir stemmen), 5: ekstra av/på-kanal, 6: motor 1003-1998 µs
 
   -- Kanalstandard, flyet sett bakfra (6d). V-hale bruker kanalene til Elev og Rud.
   -- Piloten kan endre kanalene i pilotoppsettet (P.applyChannels skriver over ch).
+  -- aux: valgfri av/på-kanal (f.eks. VifFly2), bare i bruk når piloten har valgt en bryter.
+  -- Tip-servoer (6 vingeservoer) er tatt ut 2026-10-28: ikke i bruk i oppsettet ennå.
   ch = { ailL = 1, flapL = 2, elev = 3, rud = 4, vL = 3, vR = 4, flapR = 5, ailR = 6,
-         motor = 7, tipL = 8, tipR = 9 },
+         motor = 7, aux = 8 },
   -- Rorene i kanaloppsettet (pilotoppsettet), i visningsrekkefølge
   chRoles = { { key = "ailL", label = "Ail L" }, { key = "flapL", label = "Flap L" },
               { key = "elev", label = "Elev / V-tail L" }, { key = "rud", label = "Rud / V-tail R" },
               { key = "flapR", label = "Flap R" }, { key = "ailR", label = "Ail R" },
-              { key = "motor", label = "Motor" }, { key = "tipL", label = "Tip L" },
-              { key = "tipR", label = "Tip R" } },
+              { key = "motor", label = "Motor" }, { key = "aux", label = "Extra on/off" } },
   chMax = 16,   -- høyeste kanal som kan velges (CH17-21 er virtuelle kanaler)
   names = { ailL = "Ail L", flapL = "Flap L", flapR = "Flap R", ailR = "Ail R",
             elev = "Elev", rud = "Rud", vL = "V-L", vR = "V-R",
-            motor = "Motor", tipL = "Tip L", tipR = "Tip R" },
+            motor = "Motor", aux = "Ekstra", tipL = "Tip L", tipR = "Tip R" },
 
   -- Rekkefølge i senter og endepunkter (steg 2 og 3)
   order = { "flapL", "flapR", "ailL", "ailR", "tipL", "tipR", "elev", "rud", "vL", "vR" },
@@ -64,6 +65,9 @@ return {
       accept = { "3pos", "2pos" }, default = { none = true } },
     { key = "vario", label = "Vario on/off", kind = "pos", optional = true,
       accept = { "3pos", "2pos" }, default = { none = true } },
+    -- Ekstra av/på-kanal (std CH8): -100 % av, +100 % i valgt bryterposisjon
+    { key = "aux", label = "Extra channel on/off", kind = "pos", optional = true,
+      accept = { "2pos", "3pos" }, default = { none = true } },
   },
 
   values = {
@@ -86,6 +90,9 @@ return {
     crowFlap = 60, crowAil = 40,       -- % ved full crow
     vtailEle = 70, vtailRud = 50,      -- % V-hale-miks
     motorUp = 3, motorDown = 1,        -- tideler sekund, myk start/stopp (80 % ned fra 15/5, 2026-10-28)
+    -- Motorkanalens endepunkter i 0,1 %: 100 % = 512 µs fra 1500, så -97,1 % = 1003 µs (motor av)
+    -- og +97,3 % = 1998 µs (full). Settes ved ESC-kalibrering og hver gang oppsettet skrives.
+    motorMin = -971, motorMax = 973,
     flapSlow = 5,                      -- tideler sekund, servohastighet flaps (bare camber, ikke crow)
     ailDown = 60,                      -- % aileron ned (differensial i steg 4), opp = 100
     -- Camber per ror (bestemt 2026-10-26): i Termikk og i Speed går kontrollen fra minst
@@ -109,6 +116,7 @@ return {
     motorSec = 30, motorChoices = { 30, 20, 40, 60 },
     cutSec = 10,
     jingleSec = 120,   -- trudelutt når det er 2 min igjen av flytiden
+    motorNagSec = 10, motorNagFile = "/SOUNDS/en/motor.wav",   -- «motor» til motoren er av etter motortiden
     -- Motorbatteri (ER8: RxBt fra spenningsledningen): over packMin V regnes det som en pakke,
     -- celletall = oppover(V / cellDetect). Oransje under cellLow, rød under cellWarn V per celle.
     packMin = 6.0, cellDetect = 4.35, cellLow = 3.7, cellWarn = 3.5,

@@ -436,6 +436,18 @@ return function(L, STD, W)
       end
     end
 
+    -- Ekstra av/på-kanal (f.eks. VifFly2): av (-100 %), på (+100 %) i valgt bryterposisjon
+    local ax = prof.aux
+    if ax and ax.ctrl and ax.pos and STD.ch.aux then
+      local s = L.switchIndex(ax.ctrl, ax.pos)
+      if s then
+        add(STD.ch.aux, { name = "AuxAv", source = MAX, weight = -100 })
+        add(STD.ch.aux, { name = "AuxOn", source = MAX, weight = 100, switch = s, multiplex = 2 })
+      else
+        note("Fant ikke bryteren til ekstra av/på-kanal: CH" .. STD.ch.aux .. " ikke satt opp.")
+      end
+    end
+
     -- Flymoduser: fast nummer, egen høyderorstrim og diff-trim i hver modus.
     -- trimsModes har nøkkel 1-6 (Rud, Ele, Thr, Ail, T5, T6), sjekket med RM Diagnose.
     local ti = prof.difftrim and L.trimIndex(prof.difftrim.trim)
@@ -546,12 +558,18 @@ return function(L, STD, W)
 
   -- Kanaler veiviseren eier: standardkanalene og de virtuelle
   -- Kanaler veiviseren eier: standardkanalene og de virtuelle, og kanalene den skrev til
-  -- sist (har piloten flyttet et ror, ryddes den gamle kanalen)
-  local function ownedChannels(st)
+  -- sist (har piloten flyttet et ror, ryddes den gamle kanalen). Ekstra av/på-kanal eies bare
+  -- når veiviseren skriver den, ellers står pilotens egne mikser der i fred.
+  local function ownedChannels(st, p)
     local t = {}
-    for _, ch in pairs(STD.ch) do t[ch] = true end
+    for k, ch in pairs(STD.ch) do
+      if k ~= "aux" or (p and p.mixes[ch]) then t[ch] = true end
+    end
     for _, ch in pairs(VCH) do t[ch] = true end
-    for _, ch in ipairs((st and st.ownedCh) or {}) do t[ch] = true end
+    local aux = st and st.auxCh
+    for _, ch in ipairs((st and st.ownedCh) or {}) do
+      if ch ~= STD.ch.aux or aux == ch then t[ch] = true end
+    end
     return t
   end
 
@@ -560,9 +578,12 @@ return function(L, STD, W)
   function S.write(p, st)
     local rep, bad = {}, 0
     local function fail(t) rep[#rep + 1] = "! " .. t; bad = bad + 1 end
-    local owned = ownedChannels(st)
+    local owned = ownedChannels(st, p)
     st.ownedCh = {}
-    for _, ch in pairs(STD.ch) do st.ownedCh[#st.ownedCh + 1] = ch end
+    for k, ch in pairs(STD.ch) do
+      if k ~= "aux" or p.mixes[ch] then st.ownedCh[#st.ownedCh + 1] = ch end
+    end
+    st.auxCh = (STD.ch.aux and p.mixes[STD.ch.aux]) and STD.ch.aux or nil
 
     -- Mikser: sjekk plassen først
     local others = 0
@@ -593,6 +614,9 @@ return function(L, STD, W)
     end
     for _, c in ipairs(W.channels(st.cfg, true)) do L.setOutput(c.ch - 1, { name = c.name }) end
     for ch, name in pairs(p.outputs) do L.setOutput(ch - 1, { name = name }) end
+    if st.cfg.motor then   -- motor av 1003 µs, full 1998 µs
+      L.setOutput(STD.ch.motor - 1, { min = V.motorMin, max = V.motorMax, ppmCenter = 0 })
+    end
     rep[#rep + 1] = "Mikser: " .. written
     if written > 0 then st.planVer = STD.planVersion end
 

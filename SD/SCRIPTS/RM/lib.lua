@@ -393,6 +393,7 @@ local function ser(v)
   end
   return tostring(v)
 end
+L.ser = ser
 
 function L.save(name, tbl)
   local f = io.open(L.DATA .. name, "w")

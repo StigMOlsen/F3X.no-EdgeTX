@@ -66,7 +66,7 @@
 <ol>
   <li>Update the internal module in the transmitter <em>and</em> all receivers to ELRS 4. Use ExpressLRS Configurator and the same bind phrase on all of them. ELRS 4 and ELRS 3 do not link with each other.</li>
   <li><kbd>MDL</kbd> → Setup → Internal RF → <strong>Arm using: Switch</strong>, switch <strong>ON</strong>. CH5 then becomes a normal channel. Needs EdgeTX 2.11 or newer.</li>
-  <li>The ExpressLRS menu (SYS → Tools → ExpressLRS): <strong>Packet Rate 100Hz Full</strong> and <strong>Switch Mode 8ch</strong>. With tip servos (CH8/CH9 and up): <strong>16ch /2</strong>.</li>
+  <li>The ExpressLRS menu (SYS → Tools → ExpressLRS): <strong>Packet Rate 100Hz Full</strong> and <strong>Switch Mode 8ch</strong>.</li>
   <li>After the change: power-cycle the receiver and check that <strong>C</strong> (connected) shows at the top of the ExpressLRS menu.</li>
 </ol>
 
@@ -107,7 +107,7 @@
   <tr><td>CH5</td><td>Flap right</td><td>=</td></tr>
   <tr><td>CH6</td><td>Aileron right</td><td>=</td></tr>
   <tr><td>CH7</td><td>Motor</td><td>=</td></tr>
-  <tr><td>CH8 / CH9</td><td>Tip left / right (6 wing servos)</td><td>=</td></tr>
+  <tr><td>CH8</td><td>Extra on/off (e.g. VifFly2), optional: pick a switch in pilot setup (“Extra channel on/off”). Without a switch the wizard leaves CH8 alone.</td><td>=</td></tr>
 </table>
 </div>
 <p>With 2 wing servos, CH1 and CH6 are used and CH2/CH5 are empty.</p>
@@ -126,16 +126,16 @@
 <div class="tablewrap">
 <table>
   <tr><th>Step</th><th>What you do</th></tr>
-  <tr><td><span class="step">P</span> Pilot setup</td><td>Pick the switch for each function by flipping it. Default: SE Thermal/Speed, SD motor on/off, SG motor power, SH trainer/test switch, RS camber, Throttle = butterfly, T3 aileron differential, S1 volume. “Channels” sets the channels.</td></tr>
-  <tr><td><span class="step">0</span> Model config</td><td>2, 4 or 6 wing servos, cross or V-tail, motor and which flight modes are used.</td></tr>
+  <tr><td><span class="step">P</span> Pilot setup</td><td>Pick the switch for each function by flipping it. Default: SE Thermal/Speed, SD motor on/off, SG motor power, SH trainer/test switch, RS camber, Throttle = butterfly, T3 aileron differential, S1 volume. Optional: vario on/off and extra channel on/off (CH8, −100 % off / +100 % on). “Channels” sets the channels.</td></tr>
+  <tr><td><span class="step">0</span> Model config</td><td>2 or 4 wing servos, cross or V-tail, motor and which flight modes are used.</td></tr>
   <tr><td><span class="step">1</span> Servo direction</td><td>Hold the trainer/test switch (SH): all surfaces should go down, the rudder to the right. Press “Reverse” where it goes the wrong way.</td></tr>
   <tr><td><span class="step">2</span> Center</td><td>Set each surface neutral with S1/S2. Normal surfaces use PPM center (±500 µs). Flaps use subtrim, and above 100 % it continues in PPM center (up to approx. ±195 %), because the flap neutral can be far towards one end.</td></tr>
   <tr><td><span class="step">3</span> Endpoints</td><td>One side at a time. The first time, the servo only goes 20 % out from neutral, so it does not hit a stop. Adjust out to the mechanical stop. Above 100 % needs Extended limits.</td></tr>
   <tr><td><span class="step">4</span> Throws</td><td>Throw per surface and side for aileron, elevator and rudder. Aileron down is 60 % by default (differential).</td></tr>
-  <tr><td><span class="step">E</span> ESC calibration</td><td>Only with a motor. Remove the propeller. Full Throttle, connect the battery, wait for the beeps, then zero Throttle.</td></tr>
+  <tr><td><span class="step">E</span> ESC calibration</td><td>Only with a motor. Remove the propeller. Full Throttle (1998 µs), connect the battery, wait for the beeps, then zero Throttle (1003 µs).</td></tr>
   <tr><td><span class="step">5</span> Write setup</td><td>Writes mixes, curves, flight modes, logical switches, special functions and timers. The first time by hand. After that the setup is written automatically when you leave P, 0, 1, 2, 3, 4 and E. After an update of the scripts, the setup is written again automatically the first time the wizard opens.</td></tr>
   <tr><td><span class="step">6</span> Adjust</td><td>See below.</td></tr>
-  <tr><td><span class="step">7</span> Checklist</td><td>ELRS 4 (100Hz Full, Arm using: Switch), Extended limits, failsafe, switch warning and alarms for weak signal and low receiver voltage.</td></tr>
+  <tr><td><span class="step">7</span> Checklist</td><td>ELRS 4 (100Hz Full, Arm using: Switch), Extended limits, failsafe, throttle warning off and switch warning on the motor switch, and alarms for weak signal and low receiver voltage.</td></tr>
 </table>
 </div>
 
@@ -159,7 +159,7 @@
 <div class="tablewrap">
 <table>
   <tr><td><strong>Flight time</strong></td><td>Starts at the first motor on and counts down from 10 min (or 15 min, the «Flight time» button before launch). Voice every minute, with a short jingle before «2 minutes» left, every 10 seconds from 1 minute left and every second from 25. After 0 it keeps counting (shown as +m:ss in red).</td></tr>
-  <tr><td><strong>Motor</strong></td><td>Motor time counts down from 30 s while the motor runs (20, 40 or 60 s with the «Motor» button). Voice every 5 seconds and every second for the last 7. Stops at 0.</td></tr>
+  <tr><td><strong>Motor</strong></td><td>Motor time counts down from 30 s while the motor runs (20, 40 or 60 s with the «Motor» button). Voice every 5 seconds and every second for the last 7. Stops at 0. If the motor switch is still on when the time is up, the radio says «motor» every 10 seconds and the screen shows <em>MOTOR OFF!</em> until the motor is switched off.</td></tr>
   <tr><td><strong>After motor cut</strong></td><td>Counts down 10 s from when the motor stops or the motor time runs out (whichever comes first), with voice like the motor time (every second for the last 7) and a beep at 0. Stops at 0.</td></tr>
   <tr><td><strong>Battery</strong></td><td>Top right: the flight battery if a sensor provides it (VFAS or Bat), otherwise RxBt. <strong>Motor battery:</strong> the ER8 sends the motor battery as RxBt when its voltage lead (included with the receiver) is connected to the battery – the receiver picks the input itself (4–35 V). Above 6 V «Motor battery» is shown with the cell count (detected while the motor is stopped) and volts per cell: orange below 3.7 V, red below 3.5 V. Adjust offset/ratio on RxBt under MDL → Telemetry so the value matches a voltmeter. Without the lead RxBt is the receiver voltage (red below 4.5 V). The flight log records the battery voltage at motor cut and the lowest voltage per cell.</td></tr>
   <tr><td><strong>Link</strong></td><td>Below the battery: RQly in % with a bar (green above 80, orange below, red below 50) and RSSI. «NO LINK» in red when telemetry is lost.</td></tr>

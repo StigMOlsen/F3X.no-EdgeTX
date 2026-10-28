@@ -12,6 +12,7 @@ return function(L, STD, P)
   local function loadState()
     st = L.load(L.modelKey()) or {}
     st.done = st.done or {}
+    if st.cfg and (st.cfg.wing or 0) > 4 then st.cfg.wing = 4 end   -- tip-servoer er tatt ut
   end
 
   local function saveState()
@@ -38,7 +39,7 @@ return function(L, STD, P)
         or ((r == "tipL" or r == "tipR") and cfg.wing >= 6)
         or ((r == "elev" or r == "rud") and cfg.tail == "X")
         or ((r == "vL" or r == "vR") and cfg.tail == "V")
-      if use then list[#list + 1] = { role = r, ch = STD.ch[r], name = STD.names[r] } end
+      if use and STD.ch[r] then list[#list + 1] = { role = r, ch = STD.ch[r], name = STD.names[r] } end
     end
     if withMotor and cfg.motor then
       list[#list + 1] = { role = "motor", ch = STD.ch.motor, name = STD.names.motor }
@@ -149,11 +150,19 @@ return function(L, STD, P)
     else L.toast("Feil ved skriving - kjør steg 5", true) end
   end
 
-  -- Oppsett skrevet med en eldre versjon av skriptene: skriv det på nytt
+  -- Oppsett skrevet med en eldre versjon av skriptene, eller pilotoppsettet er endret
+  -- utenfor veiviseren (F3X.no -> Pilotoppsett): skriv det på nytt
   function W.upgrade()
-    if st.done.mix and st.planVer ~= STD.planVersion then
+    local prof = loadProfile()
+    local ps = prof and L.ser(prof)
+    local changed = ps and st.profSig and st.profSig ~= ps
+    if ps and st.profSig ~= ps then st.profSig = ps; saveState() end
+    if st.done.mix and (st.planVer ~= STD.planVersion or changed) then
       W.autoWrite()
-      if st.planVer == STD.planVersion then L.toast("Ny versjon: oppsettet er skrevet på nytt") end
+      if st.planVer == STD.planVersion then
+        L.toast(changed and "Pilotoppsettet er endret: oppsettet er skrevet på nytt"
+          or "Ny versjon: oppsettet er skrevet på nytt")
+      end
     end
   end
 
@@ -166,6 +175,8 @@ return function(L, STD, P)
       -- Har piloten endret kanalene, stemmer ikke oppsettet av modellen lenger
       if s.prof then
         local sig = P.channelSig(s.prof)
+        -- Eldre signatur hadde tip-kanalene til slutt (CH8/9, tatt ut 2026-10-28): samme kanaler
+        if st.chSig and string.sub(st.chSig, 1, #sig + 1) == sig .. "," then st.chSig = sig end
         if st.chSig and st.chSig ~= sig and next(st.done) then
           st.done = {}
           L.toast("Kanalene er endret: kjør 0-5 på nytt", true)
@@ -243,9 +254,8 @@ return function(L, STD, P)
   -- Steg 0: flykonfigurasjon
 
   local CFG_OPTS = {
-    { key = "wing", label = "Vingeservoer", values = { 2, 4, 6 }, text = function(v)
-      if v == 2 then return "2 (ailerons)" elseif v == 4 then return "4 (ail + flaps)" end
-      return "6 (ail + flaps + tip)" end },
+    { key = "wing", label = "Vingeservoer", values = { 2, 4 }, text = function(v)
+      return v == 2 and "2 (ailerons)" or "4 (ail + flaps)" end },
     { key = "tail", label = "Hale", values = { "X", "V" }, text = function(v)
       return v == "V" and "V-hale" or "Kryss / konvensjonell" end },
     { key = "motor", label = "Motor", values = { true, false }, text = yesno },

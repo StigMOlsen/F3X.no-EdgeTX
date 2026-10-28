@@ -213,6 +213,17 @@ return function(L, STD)
       end
       st.mr = mr
 
+      -- Motoren står fortsatt på etter at motortiden er brukt opp: «motor» hvert 10. sekund til av
+      if mr == 0 and run then
+        if not st.overAt then log("Motor still on after motor time") end
+        if not st.overAt or now - st.overAt >= V.motorNagSec * 100 then
+          if playFile then playFile(V.motorNagFile) end
+          st.overAt = now
+        end
+      else
+        st.overAt = nil
+      end
+
       -- Nedtelling etter motorkutt
       if st.cutAt then
         local cl = max(0, V.cutSec - floor((now - st.cutAt) / 100))
@@ -328,6 +339,7 @@ return function(L, STD)
       -- Motor
       local mr = st.mr or cfg.motorSec
       box(10, 250, 385, 150, "Motor (" .. cfg.motorSec .. " s)" .. (st.run and "  – running" or ""))
+      if st.overAt then L.text(202, 370, "MOTOR OFF!", MIDSIZE + CENTER, L.C.warn) end
       local mc = (mr == 0 and L.C.warn) or (st.run and mr <= 7 and L.C.act) or (st.run and L.C.text) or L.C.dim
       big(202, 290, cfg.motorSec >= 60 and F.clock(mr) or tostring(mr), mc)
 
