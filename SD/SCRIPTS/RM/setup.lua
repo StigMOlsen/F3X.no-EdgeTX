@@ -311,11 +311,10 @@ return function(L, STD, W)
         add(ch, { name = "Kamb", source = chSrc(VCH.camber), weight = 100, curveType = 3, curveValue = C[role] + 1,
           flightModes = landMask, speedUp = slow, speedDown = slow })
       end
-      -- Butterfly: flaps ned, ailerons opp
+      -- Butterfly: flaps ned, ailerons opp. Uten Slow, så flaps følger stikka i takt med ailerons og EKomp.
       if (isAil or isFlap) and crowId then
-        local slow = isFlap and V.flapSlow or 0
         add(ch, { name = "Crow", source = crowId, weight = (isFlap and -1 or 1) * a.crow[role],
-          curveType = 3, curveValue = C.crow + 1, carryTrim = false, speedUp = slow, speedDown = slow })
+          curveType = 3, curveValue = C.crow + 1, carryTrim = false })
       end
       -- Kikkflapp (virtuell kanal, negativ = ned) med andel per ror. Ailerons bare med andel,
       -- slik at det største oppsettet (6 servoer, V-hale, alle FM) holder seg under 64 mikser.

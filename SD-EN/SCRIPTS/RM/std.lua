@@ -85,8 +85,8 @@ return {
     camberFlap = 15, camberAil = 10,   -- % camber ved full Termikk/Speed
     crowFlap = 60, crowAil = 40,       -- % ved full crow
     vtailEle = 70, vtailRud = 50,      -- % V-hale-miks
-    motorUp = 15, motorDown = 5,       -- tideler sekund, myk start/stopp
-    flapSlow = 5,                      -- tideler sekund, servohastighet flaps
+    motorUp = 3, motorDown = 1,        -- tideler sekund, myk start/stopp (80 % ned fra 15/5, 2026-10-28)
+    flapSlow = 5,                      -- tideler sekund, servohastighet flaps (bare camber, ikke crow)
     ailDown = 60,                      -- % aileron ned (differensial i steg 4), opp = 100
     -- Camber per ror (bestemt 2026-10-26): i Termikk og i Speed går kontrollen fra minst
     -- utslag fram (Min) til mest utslag bak (Max). Negativ = ror ned.

@@ -660,7 +660,7 @@ return function(L, STD, W, S)
     { "range", "Range check done" },
     { "fullres", "ELRS 4: 100Hz Full, 8ch (16ch/2 with tips)" },
     { "telem", "ELRS: Telem Ratio is not Race" },
-    { "nosync", "ELRS: No sync on arm is off" },
+    { "bindsto", "ELRS RX: Bind Storage = Persistent" },
     { "arm", "Arm using: Switch, ON (CH5 becomes normal)" },
     { "ext", "Extended limits on (MODEL SETUP)" },
     { "failsafe", "Failsafe: Custom, motor -100 %, surfaces neutral" },

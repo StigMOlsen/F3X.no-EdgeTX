@@ -660,7 +660,7 @@ return function(L, STD, W, S)
     { "range", "Rekkeviddetest gjort" },
     { "fullres", "ELRS 4: 100Hz Full, 8ch (16ch/2 med tip)" },
     { "telem", "ELRS: Telem Ratio er ikke Race" },
-    { "nosync", "ELRS: No sync on arm er av" },
+    { "bindsto", "ELRS RX: Bind Storage = Persistent" },
     { "arm", "Arm using: Switch, ON (CH5 blir vanlig)" },
     { "ext", "Extended limits på (MODEL SETUP)" },
     { "failsafe", "Failsafe: Custom, motor -100 %, ror nøytrale" },
