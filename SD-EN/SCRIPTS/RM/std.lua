@@ -6,7 +6,7 @@ return {
   version = "0.2",
   -- Øk når mikserne, kurvene eller bryterne som skrives endres: et oppsett skrevet med en
   -- eldre versjon skrives da på nytt automatisk når veiviseren eller meny 6 åpnes.
-  planVersion = 3,
+  planVersion = 4,   -- 4: timerne uten minuttpip (flyskjermen gir stemmen)
 
   -- Kanalstandard, flyet sett bakfra (6d). V-hale bruker kanalene til Elev og Rud.
   -- Piloten kan endre kanalene i pilotoppsettet (P.applyChannels skriver over ch).
@@ -103,6 +103,15 @@ return {
     logInterval = 2,    -- tideler sekund, logging til SD-kortet (S6)
     lqWarn = 50,        -- % RQly: varsel om svakt signal (S2)
     rxbtWarn = 45,      -- RxBt i sensorens enhet (4,5 V hvis 1 desimal): varsel (S2)
+    -- Flyskjerm (bestemt 2026-10-28): flytid nedtelling 10 eller 15 min, motortid og
+    -- 10 s nedtelling etter motorkutt (F5J). Valgene lagres i DATA/fly.lua.
+    flightMin = 10, flightChoices = { 10, 15 },
+    motorSec = 30, motorChoices = { 30, 20, 40, 60 },
+    cutSec = 10,
+    jingleSec = 120,   -- trudelutt når det er 2 min igjen av flytiden
+    -- Motorbatteri (ER8: RxBt fra spenningsledningen): over packMin V regnes det som en pakke,
+    -- celletall = oppover(V / cellDetect). Oransje under cellLow, rød under cellWarn V per celle.
+    packMin = 6.0, cellDetect = 4.35, cellLow = 3.7, cellWarn = 3.5,
     -- Verdier per flymodus [FM] = %. FM0 Normal, FM1 Landing, FM2 Launch, FM3 Speed, FM4 Thermal.
     -- Standard 0 (bestemt 2026-10-26): pilotene slår dem på selv i meny 6
     ailRud = { [0] = 0, [1] = 0, [2] = 0, [3] = 0, [4] = 0 },

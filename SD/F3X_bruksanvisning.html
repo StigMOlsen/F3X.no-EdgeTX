@@ -116,6 +116,7 @@
 <h2 id="meny">5. Menyvalgene</h2>
 <h3>F3X.no (Tools)</h3>
 <table>
+  <tr><td><strong>Flightscreen</strong></td><td>Skjermen under flyging: flytid, motortid, nedtelling etter motorkutt og link-kvalitet, med stemme og flylogg (under).</td></tr>
   <tr><td><strong>Oppsettveiviser</strong></td><td>Setter opp modellen steg for steg (under).</td></tr>
   <tr><td><strong>Pilotoppsett</strong></td><td>Brytere og kanaler for piloten. Gjelder alle modellene.</td></tr>
   <tr><td><strong>Diagnose</strong></td><td>Tester radioens Lua-funksjoner. Kjør i en tom testmodell. Resultatet lagres i <code>SCRIPTS/RM/DATA/diag.lua</code>.</td></tr>
@@ -152,6 +153,21 @@
 </div>
 <p><strong>Hold SH inne</strong> (lære-/testbryteren) i steg 4 og meny 6, så står alle rorene i senter. Det er nyttig for å sammenligne mot nøytral. Det krever noen få ledige mikser. Er modellen nesten full, vises ikke hintet «Hold SH inne» på skjermen.</p>
 <p>Verdiene per flymodus gjelder den flymodusen radioen står i. Bytt flymodus med bryteren mens du justerer. Aileron-differensialen stilles med trimmen T3 i lufta, med egen verdi per flymodus.</p>
+
+<h3>Flightscreen</h3>
+<p>Åpne <strong>F3X.no → Flightscreen</strong> før du starter, og la skjermen stå åpen under flygingen. Tidene kommer fra modellens timere (steg 5 skriver dem når flyet har motor), så de teller videre selv om du lukker skjermen – men stemmen og loggen kommer bare mens den er åpen.</p>
+<div class="tablewrap">
+<table>
+  <tr><td><strong>Flytid</strong></td><td>Starter ved første motor på og teller ned fra 10 min (eller 15 min, knappen «Flytid» før start). Stemme hvert minutt, med en trudelutt før «2 minutter» igjen, hvert 10. sekund fra 1 minutt igjen og hvert sekund fra 25. Etter 0 teller den videre (vises som +m:ss i rødt).</td></tr>
+  <tr><td><strong>Motor</strong></td><td>Motortiden teller ned fra 30 s mens motoren går (20, 40 eller 60 s med knappen «Motor»). Stemme hvert 5. sekund og hvert sekund de 7 siste. Stopper på 0.</td></tr>
+  <tr><td><strong>Etter motorkutt</strong></td><td>Teller ned 10 s fra motoren stoppes eller motortiden går ut (det som kommer først), med stemme som motortiden (hvert sekund de 7 siste) og en pipetone på 0. Stopper på 0.</td></tr>
+  <tr><td><strong>Batteri</strong></td><td>Øverst til høyre: flybatteriet hvis en sensor gir det (VFAS eller Bat), ellers RxBt. <strong>Motorbatteri:</strong> ER8 sender motorbatteriet som RxBt når spenningsledningen (fulgte med mottakeren) er koblet til batteriet – mottakeren velger inngang selv (4–35 V). Over 6 V vises «Motorbatteri» med celletall (regnes når motoren står) og volt per celle: oransje under 3,7 V, rød under 3,5 V. Juster offset/ratio på RxBt under MDL → Telemetry så verdien stemmer med et voltmeter. Uten ledningen er RxBt mottakerspenningen (rød under 4,5 V). I flyloggen står batterispenningen ved motorkutt og laveste spenning per celle.</td></tr>
+  <tr><td><strong>Link</strong></td><td>Under batteriet: RQly i % med stolpe (grønn over 80, oransje under, rød under 50) og RSSI. «INGEN LINK» i rødt når telemetrien er borte.</td></tr>
+  <tr><td><strong>Nullstill</strong></td><td>Trykk to ganger (bare når motoren står) for å nullstille tidene før neste flyging. «Reset flight» i radioen virker også.</td></tr>
+</table>
+</div>
+<p><strong>Flylogg:</strong> hendelsene skrives til <code>LOGS/F3X_&lt;modell&gt;_&lt;dato&gt;.txt</code> på SD-kortet: start, motor på/av med motortid, motortid brukt opp, 10 s etter kutt (med høyde hvis mottakeren har høydesensor), bytte av flymodus, svakt signal, link tapt/tilbake og flytid nådd. Ved nullstilling skrives en oppsummering med flytid, motortid, laveste RQly og RxBt og maks høyde. I tillegg logger radioen alle telemetriverdier og brytere til en CSV-fil i <code>LOGS/</code> (spesialfunksjonen «Logging til SD»).</p>
+<p>Stemmen bruker radioens tall (engelsk når radioen har engelsk talespråk). Har du satt opp modellen med en eldre versjon, skrives oppsettet på nytt første gang veiviseren eller meny 6 åpnes, så timerne ikke piper i tillegg.</p>
 
 <h3>Flymoduser</h3>
 <p>Normal (FM0) når ingen annen er på. Landing (FM1) slår inn ved 10 % crow og kutter motoren. Motoren er sperret til motorbryteren settes av igjen. Speed (FM3) og Termikk (FM4) på egen bryter. Med motor: egne flymoduser per motortrinn med eget høyderorstrim. Norske stemmeutrop ved bytte.</p>

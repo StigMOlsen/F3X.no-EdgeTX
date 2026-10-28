@@ -116,6 +116,7 @@
 <h2 id="menu">5. Menu items</h2>
 <h3>F3X.no (Tools)</h3>
 <table>
+  <tr><td><strong>Flightscreen</strong></td><td>The screen while flying: flight time, motor time, countdown after motor cut and link quality, with voice and a flight log (below).</td></tr>
   <tr><td><strong>Setup wizard</strong></td><td>Sets up the model step by step (below).</td></tr>
   <tr><td><strong>Pilot setup</strong></td><td>Switches and channels for the pilot. Applies to all models.</td></tr>
   <tr><td><strong>Diagnostics</strong></td><td>Tests the radio's Lua functions. Run it in an empty test model. The result is saved in <code>SCRIPTS/RM/DATA/diag.lua</code>.</td></tr>
@@ -152,6 +153,21 @@
 </div>
 <p><strong>Hold SH in</strong> (the trainer/test switch) in step 4 and menu 6, and all surfaces go to center. This is handy for comparing with neutral. It needs a few free mixes. If the model is nearly full, the hint “Hold SH in” is not shown on the screen.</p>
 <p>The values per flight mode apply to the flight mode the radio is in. Change flight mode with the switch while adjusting. The aileron differential is set with trim T3 in flight, with its own value per flight mode.</p>
+
+<h3>Flightscreen</h3>
+<p>Open <strong>F3X.no → Flightscreen</strong> before launch and leave it open during the flight. The times come from the model's timers (step 5 writes them when the model has a motor), so they keep counting if you close the screen – but the voice and the log only run while it is open.</p>
+<div class="tablewrap">
+<table>
+  <tr><td><strong>Flight time</strong></td><td>Starts at the first motor on and counts down from 10 min (or 15 min, the «Flight time» button before launch). Voice every minute, with a short jingle before «2 minutes» left, every 10 seconds from 1 minute left and every second from 25. After 0 it keeps counting (shown as +m:ss in red).</td></tr>
+  <tr><td><strong>Motor</strong></td><td>Motor time counts down from 30 s while the motor runs (20, 40 or 60 s with the «Motor» button). Voice every 5 seconds and every second for the last 7. Stops at 0.</td></tr>
+  <tr><td><strong>After motor cut</strong></td><td>Counts down 10 s from when the motor stops or the motor time runs out (whichever comes first), with voice like the motor time (every second for the last 7) and a beep at 0. Stops at 0.</td></tr>
+  <tr><td><strong>Battery</strong></td><td>Top right: the flight battery if a sensor provides it (VFAS or Bat), otherwise RxBt. <strong>Motor battery:</strong> the ER8 sends the motor battery as RxBt when its voltage lead (included with the receiver) is connected to the battery – the receiver picks the input itself (4–35 V). Above 6 V «Motor battery» is shown with the cell count (detected while the motor is stopped) and volts per cell: orange below 3.7 V, red below 3.5 V. Adjust offset/ratio on RxBt under MDL → Telemetry so the value matches a voltmeter. Without the lead RxBt is the receiver voltage (red below 4.5 V). The flight log records the battery voltage at motor cut and the lowest voltage per cell.</td></tr>
+  <tr><td><strong>Link</strong></td><td>Below the battery: RQly in % with a bar (green above 80, orange below, red below 50) and RSSI. «NO LINK» in red when telemetry is lost.</td></tr>
+  <tr><td><strong>Reset</strong></td><td>Press twice (only when the motor is stopped) to reset the times before the next flight. «Reset flight» on the radio also works.</td></tr>
+</table>
+</div>
+<p><strong>Flight log:</strong> events are written to <code>LOGS/F3X_&lt;model&gt;_&lt;date&gt;.txt</code> on the SD card: start, motor on/off with motor time, motor time used up, 10 s after cut (with height if the receiver has an altitude sensor), flight mode changes, weak signal, link lost/back and flight time reached. On reset a summary is written with flight time, motor time, lowest RQly and RxBt and max height. The radio also logs all telemetry values and switches to a CSV file in <code>LOGS/</code> (the special function «Logging to SD»).</p>
+<p>The voice uses the radio's numbers. If you set up the model with an older version, the setup is rewritten the first time the wizard or menu 6 is opened, so the timers do not beep as well.</p>
 
 <h3>Flight modes</h3>
 <p>Normal (FM0) when no other is on. Landing (FM1) comes on at 10 % crow and cuts the motor. The motor stays locked until the motor switch is set to off again. Speed (FM3) and Thermal (FM4) on their own switch. With a motor: separate flight modes per motor step with their own elevator trim. English voice callouts when the mode changes.</p>

@@ -5,6 +5,7 @@
 local toolName = "TNS|F3X.no|TNE"
 
 local APPS = {
+  { "Flightscreen", "Tider, link og flylogg", "/SCRIPTS/RM/APPS/flyskjerm.lua" },
   { "Oppsettveiviser", "Nytt fly eller endre oppsett", "/SCRIPTS/RM/APPS/veiviser.lua" },
   { "Pilotoppsett", "Brytere og kontroller", "/SCRIPTS/RM/APPS/pilot.lua" },
   { "Diagnose", "Test av Lua-API (tom testmodell)", "/SCRIPTS/RM/APPS/diag.lua" },

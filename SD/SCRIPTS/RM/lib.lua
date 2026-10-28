@@ -699,6 +699,25 @@ function L.buttons(s)
   return list
 end
 
+-- Trykk: knappen som er truffet, ellers den nærmeste innenfor L.TOUCH_PAD (800 x 480-
+-- koordinater), så et trykk litt ved siden av en knapp også virker. Ved lik avstand vinner
+-- den første i listen. Et trykk rett på en deaktivert (grå) knapp gjør ingenting.
+L.TOUCH_PAD = 30
+function L.touchHit(list, x, y)
+  local best, bestD
+  for i, b in ipairs(list) do
+    local dx = math.max(b.x - x, 0, x - (b.x + b.w))
+    local dy = math.max(b.y - y, 0, y - (b.y + b.h))
+    local d = dx * dx + dy * dy
+    if b.enabled then
+      if d <= L.TOUCH_PAD * L.TOUCH_PAD and (not bestD or d < bestD) then best, bestD = i, d end
+    elseif d == 0 and not b.hidden then
+      return nil
+    end
+  end
+  return best
+end
+
 function L.run(event, touch)
   if touch and lcd.toVirtual then touch = lcd.toVirtual(touch) end
   local s = L.top()
@@ -738,13 +757,10 @@ function L.run(event, touch)
       local b = list[s.focus]
       if b and b.enabled then b.fn() end
     elseif event == EVT_TOUCH_TAP and touch then
-      for i, b in ipairs(list) do
-        if b.enabled and touch.x >= b.x and touch.x <= b.x + b.w
-           and touch.y >= b.y and touch.y <= b.y + b.h then
-          if not b.hidden then s.focus = i end
-          b.fn()
-          break
-        end
+      local i = L.touchHit(list, touch.x, touch.y)
+      if i then
+        if not list[i].hidden then s.focus = i end
+        list[i].fn()
       end
     end
   end

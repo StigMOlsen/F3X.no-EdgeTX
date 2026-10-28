@@ -517,10 +517,11 @@ return function(L, STD, W)
       if not lq and not bt then note("Fant ingen telemetri (RQly/RxBt): alarmer utelatt.") end
     end
 
-    -- Timere: flytid fra første motorstart, motortid mens motoren går
+    -- Timere: flytid fra første motorstart, motortid mens motoren går. Uten pip og stemme:
+    -- flyskjermen (flight.lua) leser timerne og gir nedtellingen.
     if motorOk then
-      p.timers[0] = { name = "Flytid", mode = 2, switch = l2, start = 0, minuteBeep = true, countdownBeep = 0, persistent = 0 }
-      p.timers[1] = { name = "Motor", mode = 1, switch = l5, start = 0, minuteBeep = true, countdownBeep = 0, persistent = 0 }
+      p.timers[0] = { name = "Flytid", mode = 2, switch = l2, start = 0, minuteBeep = false, countdownBeep = 0, persistent = 0 }
+      p.timers[1] = { name = "Motor", mode = 1, switch = l5, start = 0, minuteBeep = false, countdownBeep = 0, persistent = 0 }
     end
 
     p.curves = S.curveDefs(cfg, prof, st)
