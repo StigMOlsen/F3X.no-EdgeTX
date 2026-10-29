@@ -185,7 +185,7 @@
   <tr><td><strong>Slette</strong></td><td>Dobbelttrykk på en modell som <em>ikke</em> er aktiv og velg <strong>Delete model</strong>. Filen flyttes til mappen for slettede modeller på SD-kortet.</td></tr>
 </table>
 </div>
-<p><strong>Viktig:</strong> Veiviseren lagrer fremdriften og verdiene (utslag, meny 6) etter <strong>modellnavnet</strong>, i <code>SCRIPTS/RM/DATA/m_&lt;navn&gt;.lua</code>. Endrer du navnet, ser veiviseren modellen som ny: oppsettet i radioen er uendret, men stegene står som ikke gjort. To modeller med samme navn deler fremdrift, så gi en kopi nytt navn med en gang. Navn med æøå og mellomrom virker, men gjøres om til «_» i filnavnet.</p>
+<p><strong>Viktig:</strong> Veiviseren lagrer fremdriften og verdiene (utslag, meny 6) per <strong>modellfil</strong>, i <code>SCRIPTS/RM/DATA/f_&lt;modellfil&gt;.lua</code>. Du kan derfor gi modellen nytt navn uten å miste noe. En kopi (Duplicate model) får originalens verdier første gang veiviseren åpnes, så åpne veiviseren på kopien før du gir den nytt navn. En ny, blank modell starter alltid på nytt.</p>
 
 <h2 id="feil">6. Feilsøking</h2>
 <div class="tablewrap">

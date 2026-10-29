@@ -185,7 +185,7 @@
   <tr><td><strong>Delete</strong></td><td>Double-tap a model that is <em>not</em> active and choose <strong>Delete model</strong>. The file is moved to the deleted-models folder on the SD card.</td></tr>
 </table>
 </div>
-<p><strong>Important:</strong> The wizard stores its progress and values (throws, menu 6) by <strong>model name</strong>, in <code>SCRIPTS/RM/DATA/m_&lt;name&gt;.lua</code>. If you rename the model, the wizard sees it as new: the setup in the radio is unchanged, but the steps show as not done. Two models with the same name share progress, so rename a copy right away. Names with spaces and special characters work, but become “_” in the file name.</p>
+<p><strong>Important:</strong> The wizard stores its progress and values (throws, menu 6) per <strong>model file</strong>, in <code>SCRIPTS/RM/DATA/f_&lt;model file&gt;.lua</code>, so you can rename a model without losing anything. A copy (Duplicate model) gets the original’s values the first time the wizard opens, so open the wizard on the copy before renaming it. A new, blank model always starts from scratch.</p>
 
 <h2 id="trouble">6. Troubleshooting</h2>
 <div class="tablewrap">

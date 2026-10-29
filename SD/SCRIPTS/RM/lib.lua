@@ -438,12 +438,34 @@ function L.load(name)
   return readOld(name)
 end
 
-function L.modelKey()
+-- Fremdriften lagres etter modellfilen (f_model1.lua), så den følger modellen ved nytt navn.
+-- Den gamle nøkkelen etter navnet (m_<navn>.lua) brukes til å flytte over eldre fremdrift
+-- og gir en kopi (Duplicate model, samme navn) originalens verdier første gang.
+function L.modelNameKey()
   local info = model.getInfo()
   local n = (info and info.name) or ""
   n = string.gsub(n, "[^%w]", "_")
   if n == "" then n = "uten_navn" end
   return "m_" .. n .. ".lua"
+end
+
+function L.modelKey()
+  local info = model.getInfo()
+  local f = info and info.filename
+  if type(f) == "string" and f ~= "" then
+    f = string.gsub(string.gsub(f, "%.%w+$", ""), "[^%w]", "_")
+    return "f_" .. f .. ".lua"
+  end
+  return L.modelNameKey()
+end
+
+-- Har modellen ingen mikser i det hele tatt (ny, blank modell), er lagret oppsett ikke lenger gyldig
+function L.modelEmpty()
+  for ch = 0, 31 do
+    local ok, c = pcall(model.getMixesCount, ch)
+    if ok and c and c > 0 then return false end
+  end
+  return true
 end
 
 ------------------------------------------------------------------------

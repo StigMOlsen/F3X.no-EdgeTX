@@ -2,7 +2,7 @@
 -- steg 2 senter og steg 3 endepunkter. Steg 4, ESC, 6 og 7 ligger i adjust.lua,
 -- steg 5 (skriv oppsett) i setup.lua.
 -- Fremdrift, flykonfig og alle justerte verdier lagres per modell i
--- /SCRIPTS/RM/DATA/m_<modellnavn>.lua.
+-- /SCRIPTS/RM/DATA/f_<modellfil>.lua (eldre: m_<modellnavn>.lua).
 
 return function(L, STD, P)
   local W = {}
@@ -10,7 +10,15 @@ return function(L, STD, P)
   local st = { done = {} }
 
   local function loadState()
-    st = L.load(L.modelKey()) or {}
+    local key, nameKey = L.modelKey(), L.modelNameKey()
+    st = L.load(key)
+    if not st and key ~= nameKey then
+      st = L.load(nameKey)   -- eldre fremdrift etter navn, eller kopi med samme navn
+      if st then L.save(key, st) end
+    end
+    st = st or {}
+    -- Et filnavn kan brukes på nytt etter sletting: blank modell = start på nytt
+    if st.done and st.done.mix and L.modelEmpty() then st = {} end
     st.done = st.done or {}
     if st.cfg and (st.cfg.wing or 0) > 4 then st.cfg.wing = 4 end   -- tip-servoer er tatt ut
   end
