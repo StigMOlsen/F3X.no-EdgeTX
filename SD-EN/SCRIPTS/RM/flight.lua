@@ -106,12 +106,181 @@ return function(L, STD)
 
   local BAT_NAMES = { "VFAS", "Bat", "RxBt" }
 
+  ----------------------------------------------------------------------
+  -- Historikk for grafene: flytid (t), batteri (v, -1 = ingen verdi), RQly (q, 0 = ingen link),
+  -- motor (m, 1 = går) og sendereffekt (p, mW fra ELRS-sensoren TPWR, 0 = ingen verdi). Ligger i F, så den beholdes når flyskjermen lukkes og åpnes igjen
+  -- mens verktøyet kjører. Nullstilles ved ny flyging.
+
+  local function newHist() return { t = {}, v = {}, q = {}, m = {}, p = {}, step = V.graphSec } end
+  F.hist = newHist()
+
+  function F.sample(h, t, v, q, m, p)
+    local n = #h.t
+    if n > 0 and t < h.t[n] then   -- timerne nullstilt mens skjermen var lukket: ny flyging
+      h.t, h.v, h.q, h.m, h.p, h.step = {}, {}, {}, {}, {}, V.graphSec
+      n = 0
+    end
+    n = n + 1
+    h.t[n], h.v[n], h.q[n], h.m[n], h.p[n] = t, v, q, m, p or 0
+    if n > V.graphMax then   -- annethvert punkt bort, dobbelt intervall
+      local k = { t = {}, v = {}, q = {}, m = {}, p = {} }
+      for i = 1, n, 2 do
+        local j = #k.t + 1
+        k.t[j], k.v[j], k.q[j], k.m[j], k.p[j] = h.t[i], h.v[i], h.q[i], h.m[i], h.p[i]
+      end
+      h.t, h.v, h.q, h.m, h.p, h.step = k.t, k.v, k.q, k.m, k.p, h.step * 2
+    end
+  end
+
+  -- Graf over batteri ("v") eller link ("q") for flygingen så langt
+  function F.graphScreen(kind, info)
+    local s = {}
+    local X0, X1, Y0, Y1 = 80, 770, 72, 352
+
+    local function range(h)
+      if kind == "q" then return 0, 100 end
+      local lo, hi
+      for i = 1, #h.v do
+        local v = h.v[i]
+        if v > 0 then lo = (lo and math.min(lo, v)) or v; hi = (hi and max(hi, v)) or v end
+      end
+      if not lo then return 0, 1 end
+      lo, hi = lo - 0.2, hi + 0.2
+      if hi - lo < 1 then local c = (hi + lo) / 2; lo, hi = c - 0.5, c + 0.5 end
+      return lo, hi
+    end
+
+    local function line(x1, y1, x2, y2, color, pat)
+      lcd.drawLine(floor(x1 + 0.5), floor(y1 + 0.5), floor(x2 + 0.5), floor(y2 + 0.5), pat or SOLID or 0, color)
+    end
+
+    function s:draw(list)
+      local h = F.hist
+      local n = #h.t
+      L.header(kind == "q" and "Graph: link (RQly)" or ("Graph: " .. (info.cells and "motor battery" or "battery")),
+        n > 0 and F.clock(h.t[n]) or nil)
+      local lo, hi = range(h)
+      local t0, t1 = n > 0 and h.t[1] or 0, n > 0 and h.t[n] or 1
+      if t1 <= t0 then t1 = t0 + 1 end
+      local function X(t) return X0 + (X1 - X0) * (t - t0) / (t1 - t0) end
+      local function Y(v) return Y1 - (Y1 - Y0) * (L.clamp(v, lo, hi) - lo) / (hi - lo) end
+
+      -- Rutenett med verdier til venstre (og V per celle til høyre for motorbatteri)
+      lcd.drawFilledRectangle(X0, Y0, X1 - X0, Y1 - Y0, L.C.panel)
+      for i = 0, 4 do
+        local v = lo + (hi - lo) * i / 4
+        local y = floor(Y(v) + 0.5)
+        line(X0, y, X1, y, L.C.off)
+        L.text(X0 - 8, y - 8, kind == "q" and string.format("%d", floor(v + 0.5)) or string.format("%.1f", v),
+          SMLSIZE + RIGHT, L.C.dim)
+        if kind == "v" and info.cells then
+          L.text(X1 + 4, y - 8, string.format("%.2f", v / info.cells), SMLSIZE, L.C.dim)
+        end
+      end
+      lcd.drawRectangle(X0, Y0, X1 - X0, Y1 - Y0, L.C.edge)
+      L.text(X0 - 8, Y0 - 22, kind == "q" and "%" or "V", SMLSIZE + RIGHT, L.C.dim)
+      if kind == "v" and info.cells then L.text(X1 + 4, Y0 - 22, "V/c", SMLSIZE, L.C.dim) end
+
+      -- Varselgrense (rød, stiplet)
+      local warnV = (kind == "q" and V.lqWarn) or (info.cells and V.cellWarn * info.cells) or nil
+      if warnV and warnV > lo and warnV < hi then line(X0, Y(warnV), X1, Y(warnV), L.C.warn, DOTTED) end
+
+      -- Motor på: oransje stripe under grafen
+      for i = 1, n - 1 do
+        if h.m[i] == 1 then
+          lcd.drawFilledRectangle(floor(X(h.t[i])), Y1 + 3, max(1, floor(X(h.t[i + 1]) - X(h.t[i]) + 0.5)), 6, L.C.act)
+        end
+      end
+      L.text(X0, Y1 + 12, F.clock(t0), SMLSIZE, L.C.dim)
+      L.text(floor((X0 + X1) / 2), Y1 + 12, F.clock(floor((t0 + t1) / 2)), SMLSIZE + CENTER, L.C.dim)
+      L.text(X1, Y1 + 12, F.clock(t1), SMLSIZE + RIGHT, L.C.dim)
+      L.text(X0 + 60, Y1 + 12, "motor on", SMLSIZE, L.C.act)
+
+      -- Kurven, med brudd der det ikke var verdi (batteri) og grønn/oransje/rød etter nivå
+      local vals = kind == "q" and h.q or h.v
+      local vMin, vSum, vN
+      for i = 1, n do
+        local v = vals[i]
+        if kind == "q" or v > 0 then
+          vMin = (vMin and math.min(vMin, v)) or v
+          vSum, vN = (vSum or 0) + v, (vN or 0) + 1
+        end
+        if i > 1 then
+          local a = vals[i - 1]
+          if kind == "q" or (a > 0 and v > 0) then
+            local c = L.C.ok
+            if kind == "q" then c = (v < V.lqWarn and L.C.warn) or (v < 80 and L.C.act) or L.C.ok
+            elseif info.cells then
+              local cell = v / info.cells
+              c = (cell < V.cellWarn and L.C.warn) or (cell < V.cellLow and L.C.act) or L.C.ok
+            end
+            local xa, xb, ya, yb = X(h.t[i - 1]), X(h.t[i]), Y(a), Y(v)
+            line(xa, ya, xb, yb, c)
+            line(xa, ya + 1, xb, yb + 1, c)
+          end
+        end
+      end
+
+      -- Sendereffekt (dynamisk effekt i ELRS) på link-grafen: blå trappekurve, logaritmisk mW-skala
+      -- til høyre (10 mW nederst, 1000 mW øverst), så trinnene 10/25/50/100/250/500/1000 skilles
+      local pMax, pSum, pN
+      if kind == "q" then
+        local lg = math.log
+        local function PY(mw) return Y1 - (Y1 - Y0) * (lg(L.clamp(mw, 10, 1000)) - lg(10)) / (lg(1000) - lg(10)) end
+        for i = 1, n do
+          local pw = h.p[i]
+          if pw > 0 then
+            pMax = max(pMax or 0, pw)
+            pSum, pN = (pSum or 0) + pw, (pN or 0) + 1
+            if i < n then
+              local xa, xb, y = X(h.t[i]), X(h.t[i + 1]), PY(pw)
+              line(xa, y, xb, y, L.C.pwr)
+              line(xa, y + 1, xb, y + 1, L.C.pwr)
+              if h.p[i + 1] > 0 then line(xb, y, xb, PY(h.p[i + 1]), L.C.pwr) end
+            end
+          end
+        end
+        if pMax then
+          for _, mw in ipairs({ 10, 100, 1000 }) do
+            L.text(X1 + 3, floor(PY(mw) + 0.5) - 8, mw >= 1000 and "1k" or tostring(mw), SMLSIZE, L.C.pwr)
+          end
+          L.text(X1 + 3, Y0 - 22, "mW", SMLSIZE, L.C.pwr)
+          L.text(X0 + 160, Y1 + 12, "TX power", SMLSIZE, L.C.pwr)
+        end
+      end
+
+      -- Oppsummering
+      local sum
+      if n < 2 then
+        sum = "No data yet. The graph fills while the flight screen is open."
+      elseif not vMin then
+        sum = "No battery value in this flight."
+      elseif kind == "q" then
+        sum = string.format("Min %d %%, avg %d %%", vMin, floor(vSum / vN + 0.5))
+        if pMax then sum = sum .. string.format(".  Power max %d mW, avg %d mW", floor(pMax + 0.5), floor(pSum / pN + 0.5)) end
+      else
+        sum = string.format("Min %.1f V", vMin) ..
+          (info.cells and string.format(" (%.2f V/c, %dS)", vMin / info.cells, info.cells) or "")
+      end
+      L.text(400, 392, sum, SMLSIZE + CENTER, L.C.text)
+
+      L.btnRow(list, {
+        { kind == "q" and "Show battery" or "Show link", function()
+            L.pop(); L.push(F.graphScreen(kind == "q" and "v" or "q", info))
+          end, { primary = false } },
+        { "Back", function() L.pop() end },
+      })
+    end
+
+    return s
+  end
+
   function F.screen()
     F.silenceTimers()
     local s = {}
     local cfg = loadCfg()
     local st = {}
-    local src = { lq = field("RQly"), rssi = field("1RSS"), alt = field("Alt") }
+    local src = { lq = field("RQly"), rssi = field("1RSS"), alt = field("Alt"), pwr = field("TPWR") }
     -- Batteri: flybatteriet hvis en sensor gir det (VFAS/Bat), ellers RxBt. ER8 gir motorbatteriet
     -- som RxBt når spenningsledningen er koblet til batteriet (4-35 V, velger inngang selv).
     for _, n in ipairs(BAT_NAMES) do
@@ -145,7 +314,8 @@ return function(L, STD)
     end
 
     local function clear()
-      st = { file = st.file, cells = st.cells }
+      st = { file = st.file }   -- celletallet regnes på nytt (ny pakke kan ha annet celletall)
+      F.hist = newHist()
     end
 
     local function motorRunning(me)
@@ -270,6 +440,12 @@ return function(L, STD)
         end
         if linked and st.rx and st.rx > 0 and (not st.rxMin or st.rx < st.rxMin) then st.rxMin = st.rx end
         if linked and a and (not st.altMax or a > st.altMax) then st.altMax = a end
+        -- Punkt i grafen hvert graphSec sekund (flytiden er x-aksen)
+        if not st.sampleAt or now - st.sampleAt >= F.hist.step * 100 then
+          st.sampleAt = now
+          F.sample(F.hist, fe, (linked and st.rx and st.rx > 0) and st.rx or -1,
+            (linked and lq) or 0, run and 1 or 0, (linked and read(src.pwr)) or 0)
+        end
       end
       st.linkWas = linked
     end
@@ -305,9 +481,16 @@ return function(L, STD)
       big(260, 110, F.clock(fr), fc)
       if not st.started then L.text(260, 200, "Starts at motor on", SMLSIZE + CENTER, L.C.dim) end
 
-      -- Batteri (øverst) og link (under)
+      -- Batteri (øverst) og link (under). Trykk på boksen viser grafen for flygingen.
+      local graph = #F.hist.t >= 2
+      local gi = { cells = st.cells }
+      if graph then
+        L.btn(list, 520, 60, 270, 85, "#graf_v", function() L.push(F.graphScreen("v", gi)) end, { hidden = true })
+        L.btn(list, 520, 155, 270, 85, "#graf_q", function() L.push(F.graphScreen("q", gi)) end, { hidden = true })
+      end
+      local gs = graph and " – graph" or ""
       box(520, 60, 270, 85, (st.cells and "Motor battery" or "Battery") ..
-        (src.rxName and (" (" .. src.rxName .. ")") or ""))
+        (src.rxName and (" (" .. src.rxName .. ")") or "") .. gs)
       if not src.rx then
         L.text(655, 98, "No sensor", CENTER, L.C.dim)
       elseif not st.linked or not st.rx or st.rx <= 0 then
@@ -322,7 +505,7 @@ return function(L, STD)
         local low = src.rxName == "RxBt" and st.rx < V.rxbtWarn / 10
         L.text(655, 88, string.format("%.1f V", st.rx), DBLSIZE + CENTER, low and L.C.warn or L.C.text)
       end
-      box(520, 155, 270, 85, "Link (RQly)")
+      box(520, 155, 270, 85, "Link (RQly)" .. gs)
       if src.lq == nil and src.rssi == nil then
         L.text(655, 193, "No telemetry", CENTER, L.C.dim)
       elseif not st.linked then
