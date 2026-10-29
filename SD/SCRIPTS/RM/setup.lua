@@ -102,6 +102,10 @@ return function(L, STD, W)
     a.camScale = nil
     a.crowRed = a.crowRed or V.crowRed
     a.crowDiff = a.crowDiff or V.crowDiff
+    a.diffTrim = a.diffTrim or V.diffTrim
+    a.vdiffTrim = a.vdiffTrim or V.vdiffTrim
+    a.expo = a.expo or {}
+    for k, v in pairs(V.expo) do if a.expo[k] == nil then a.expo[k] = v end end
     a.eleComp = a.eleComp or { 0, 0, 0, 0, 0, 0, 0 }
     a.ailRud = a.ailRud or L.copy(V.ailRud)
     a.snap = a.snap or L.copy(V.snap)
@@ -152,6 +156,27 @@ return function(L, STD, W)
 
   -- Kikkflapp brukes ikke i Landing
   S.SNAP_SKIP = { [1] = true }
+
+  -- Differensial-trim: aileron (T3) og sideroret på V-halen (T5). Diff-mixen er ned-siden av
+  -- utslaget ganget med trimområdet, og DiffT ganger den med trimmen. Full trim endrer altså
+  -- ned-utslaget med diffTrim (vdiffTrim) % av utslaget, den ene eller den andre veien.
+  S.DIFF = { ailL = "ail", ailR = "ail", vL = "rud", vR = "rud" }
+  function S.diffWeight(st, role)
+    local f = S.DIFF[role]
+    local sg = sign(role, f)
+    local pct = f == "ail" and st.adj.diffTrim or st.adj.vdiffTrim
+    return L.round(-sg * S.rate(st, role, f, -sg) * pct / 100)
+  end
+
+  -- Expo som i EdgeTX: x i -1..1, k > 0 = mykt rundt senter. Brukes i crow-kurven og grafen.
+  function S.expo(x, k)
+    if k == 0 then return x end
+    local function eu(u, q) return (q * u ^ 3 + (100 - q) * u) / 100 end
+    local u = math.abs(x)
+    local y = k > 0 and eu(u, k) or 1 - eu(1 - u, -k)
+    return x < 0 and -y or y
+  end
+  local EXPO_CH = { ail = VCH.expoAil, ele = VCH.expoEle, rud = VCH.expoRud }
 
   -- Vekt for CDiff: ved full crow fjernes (100 - crowDiff) % av ned-aileronen
   function S.crowDiffWeight(st, role)
@@ -209,7 +234,19 @@ return function(L, STD, W)
     end
     local crowRev = prof.crow and prof.crow.rev
     local xs = { -100, xDead(), 100 }
-    d[C.crow] = curveDef("Crw", { 100, 0, 0 }, xs, crowRev)
+    local ce = a.expo.crow or 0
+    if ce == 0 then
+      d[C.crow] = curveDef("Crw", { 100, 0, 0 }, xs, crowRev)
+    else
+      -- Expo på butterfly: 4 ekstra punkter mellom full crow og crow av. Negativ = mykt i starten.
+      local xd, cx, cy = xDead(), {}, {}
+      for _, t in ipairs({ 1, 0.75, 0.5, 0.25, 0 }) do
+        cx[#cx + 1] = L.round(xd - t * (xd + 100))
+        cy[#cy + 1] = L.round(100 * S.expo(t, -ce))
+      end
+      cx[#cx + 1], cy[#cy + 1] = 100, 0
+      d[C.crow] = curveDef("Crw", cy, cx, crowRev)
+    end
     d[C.crowRed] = curveDef("CrR", { a.crowRed, 100, 100 }, xs, crowRev)
     d[C.eleComp] = curveDef("EKo", a.eleComp)   -- etter stikkas rå posisjon, som i læringen
     if cfg.motor then
@@ -256,15 +293,32 @@ return function(L, STD, W)
       table.insert(p.mixes[ch], m)
     end
 
+    -- Expo: stikka går gjennom en virtuell kanal med expo, og alle mikserne bruker den kanalen.
+    -- Bare når expo ikke er 0, så standardoppsettet ikke bruker flere mikser.
+    for f, ch in pairs(EXPO_CH) do
+      local e = a.expo[f] or 0
+      if e ~= 0 and SRC[f] then
+        add(ch, { name = "Expo", source = SRC[f], weight = 100, curveType = 1, curveValue = -e })
+        p.outputs[ch] = "Exp" .. MIX_NAMES[f]
+        SRC[f] = chSrc(ch)
+      end
+    end
+
     local crowC = prof.crow and L.ctrl(prof.crow.ctrl)
     local crowId = crowC and crowC.id
     if not crowId then err("Fant ikke butterfly-kontrollen. Crow og Landing utelatt.") end
     local camC = prof.camber and prof.camber.ctrl and L.ctrl(prof.camber.ctrl)
     local camId = camC and camC.id
-    local trimId = prof.difftrim and prof.difftrim.trim and L.trimSource(prof.difftrim.trim)
-    if prof.difftrim and prof.difftrim.trim and not trimId then
-      err("Fant ikke trim " .. prof.difftrim.trim .. ". Differensial-trim utelatt.")
+    -- Differensial-trim per funksjon: ail (T3) og rud (T5, bare V-hale)
+    local trimIds = {}
+    local function diffTrim(f, pf)
+      local t = pf and pf.trim
+      if not t then return end
+      trimIds[f] = L.trimSource(t)
+      if not trimIds[f] then err("Fant ikke trim " .. t .. ". Differensial-trim utelatt.") end
     end
+    diffTrim("ail", prof.difftrim)
+    if cfg.tail == "V" then diffTrim("rud", prof.vdifftrim) end
     local landMask = useFM[1] and 2 or 0
     local roles = W.channels(cfg, false)
     local hasRole = {}
@@ -275,13 +329,13 @@ return function(L, STD, W)
       local role, ch = c.role, c.ch
       local isAil, isFlap = WING_AIL[role] ~= nil, FLAPS[role] ~= nil
       local mainAil = role == "ailL" or role == "ailR"   -- tip-servoene får bare utslag, camber og crow
-      -- Differensial med trim: demper ned-siden. Står først fordi MULTIPLY ganger alt over.
-      if mainAil and trimId then
-        local sg = WING_AIL[role]
-        local sDown = -sg
-        add(ch, { name = "Diff", source = SRC.ail, weight = -sg * S.rate(st, role, "ail", sDown),
+      -- Differensial med trim: endrer ned-siden. Står først fordi MULTIPLY ganger alt over.
+      local df = S.DIFF[role]
+      if df and trimIds[df] then
+        local sDown = -sign(role, df)
+        add(ch, { name = "Diff", source = SRC[df], weight = S.diffWeight(st, role),
           curveType = 2, curveValue = sDown > 0 and 1 or 2 })
-        add(ch, { name = "DiffT", source = trimId, weight = 100, multiplex = 1, carryTrim = false })
+        add(ch, { name = "DiffT", source = trimIds[df], weight = 100, multiplex = 1, carryTrim = false })
       end
       -- Utslag per side (steg 4): x>0 og x<0 hver for seg
       for _, f in ipairs(FUNCS[role] or {}) do
@@ -448,14 +502,16 @@ return function(L, STD, W)
       end
     end
 
-    -- Flymoduser: fast nummer, egen høyderorstrim og diff-trim i hver modus.
+    -- Flymoduser: fast nummer, egen høyderorstrim og aileron-diff-trim (T3) i hver modus.
     -- trimsModes har nøkkel 1-6 (Rud, Ele, Thr, Ail, T5, T6), sjekket med RM Diagnose.
-    local ti = prof.difftrim and L.trimIndex(prof.difftrim.trim)
+    local ti = trimIds.ail and L.trimIndex(prof.difftrim.trim)
+    local vti = trimIds.rud and L.trimIndex(prof.vdifftrim.trim)
     local GUARD = { [2] = LS.launchG, [3] = LS.speedG, [4] = LS.thermalG }
     p.fmNames = {}
     for _, f in ipairs(STD.fms) do
       local trims = { [2] = 2 * f.fm }
       if ti then trims[ti + 1] = 2 * f.fm end
+      if vti then trims[vti + 1] = 0 end   -- V-hale-differensial (T5): felles, følger Normal i alle FM
       if f.fm == 0 then
         p.fms[0] = { name = f.name, fadeIn = V.fade, fadeOut = V.fade, trimsModes = trims }
         p.fmNames[#p.fmNames + 1] = f.name
@@ -687,6 +743,28 @@ return function(L, STD, W)
     return a and b
   end
 
+  -- Expo: f = ail, ele, rud eller crow. Finnes ikke expo-kanalen ennå, skrives alt på nytt.
+  function S.applyExpo(st, prof, f)
+    local e = st.adj.expo[f] or 0
+    if f == "crow" then return S.writeCurve(st.cfg, prof, st, C.crow) end
+    if not L.setMix(EXPO_CH[f], "Expo", { curveValue = -e }) and e ~= 0 then
+      S.write(S.plan(st.cfg, prof, st), st)
+    end
+    return true
+  end
+
+  -- Trimområdet for differensial-trimmen: kind = "ail" eller "rud" (V-hale)
+  function S.applyDiff(st, prof, kind)
+    local ok = true
+    for role, f in pairs(S.DIFF) do
+      if f == kind and STD.ch[role] and not L.setMix(STD.ch[role], "Diff", { weight = S.diffWeight(st, role) }) then
+        ok = false
+      end
+    end
+    if not ok then S.write(S.plan(st.cfg, prof, st), st) end   -- mixene fantes ikke: skriv alt på nytt
+    return true
+  end
+
   function S.applyCrowDiff(st, prof)
     local ok = true
     for _, role in ipairs({ "ailL", "ailR" }) do
@@ -753,7 +831,7 @@ return function(L, STD, W)
         y = y + 6
         for _, e in ipairs(p.errors) do L.text(20, y, "! " .. e, SMLSIZE, L.C.warn); y = y + 24 end
         for _, e in ipairs(p.notes) do L.text(20, y, e, SMLSIZE, L.C.dim); y = y + 24 end
-        L.text(20, math.max(y, 330), "Mikser på CH1-9 og CH17-20, L1-L13, spesialfunksjoner og", SMLSIZE, L.C.warn)
+        L.text(20, math.max(y, 330), "Mikser på CH1-9 og CH17-24, L1-L13, spesialfunksjoner og", SMLSIZE, L.C.warn)
         L.text(20, math.max(y, 330) + 22, "timer 1-2 overskrives. Verdiene fra steg 4 og meny 6 beholdes.", SMLSIZE, L.C.warn)
         L.btnRow(list, {
           { "Avbryt", function() L.pop() end },

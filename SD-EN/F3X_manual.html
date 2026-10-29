@@ -126,7 +126,7 @@
 <div class="tablewrap">
 <table>
   <tr><th>Step</th><th>What you do</th></tr>
-  <tr><td><span class="step">P</span> Pilot setup</td><td>Pick the switch for each function by flipping it. Default: SE Thermal/Speed, SD motor on/off, SG motor power, SH trainer/test switch, RS camber, Throttle = butterfly, T3 aileron differential, S1 volume. Optional: vario on/off and extra channel on/off (CH8, −100 % off / +100 % on). “Channels” sets the channels.</td></tr>
+  <tr><td><span class="step">P</span> Pilot setup</td><td>Pick the switch for each function by flipping it. Default: SE Thermal/Speed, SD motor on/off, SG motor power, SH trainer/test switch, RS camber, Throttle = butterfly, T3 aileron differential, T5 V-tail differential, S1 volume. Optional: vario on/off and extra channel on/off (CH8, −100 % off / +100 % on). “Channels” sets the channels.</td></tr>
   <tr><td><span class="step">0</span> Model config</td><td>2 or 4 wing servos, cross or V-tail, motor and which flight modes are used.</td></tr>
   <tr><td><span class="step">1</span> Servo direction</td><td>Hold the trainer/test switch (SH): all surfaces should go down, the rudder to the right. Press “Reverse” where it goes the wrong way.</td></tr>
   <tr><td><span class="step">2</span> Center</td><td>Set each surface neutral with S1/S2. Normal surfaces use PPM center (±500 µs). Flaps use subtrim, and above 100 % it continues in PPM center (up to approx. ±195 %), because the flap neutral can be far towards one end.</td></tr>
@@ -148,11 +148,12 @@
   <tr><td><strong>Aileron → rudder</strong></td><td>Per flight mode. Default 0 %. “Copy to all FM” gives the same value in all.</td></tr>
   <tr><td><strong>Snap flap</strong></td><td>First max per surface (small, default 20 %), then how much is used in each flight mode (default 0 %). Not in Landing.</td></tr>
   <tr><td><strong>Aileron → flaps</strong></td><td>Down in % of the flap's down throw and up in % of the flap's up throw, the same for both flaps (default 0 %). While you set down or up, both flaps show that throw, so it can be measured. Then how much of it is used in each flight mode: 100 % = exactly the throw you set for down and up (default 100 %, Landing 0 %).</td></tr>
+  <tr><td><strong>Differential and expo</strong></td><td>How much of the down throw the trim can change: aileron with T3 and V-tail (rudder) with T5. Default 30 %: full trim gives 30 % less (or more) down throw. The screen shows where the trim is now and what it gives. Then expo on aileron, elevator, rudder and butterfly: negative = softer around stick center (butterfly: softer at the start of crow), default 0 %. Full throw does not change. The graph shows the curve. Expo is the same in all flight modes.</td></tr>
   <tr><td><strong>Motor</strong></td><td>Motor level Low/Medium/Full and motor → elevator.</td></tr>
 </table>
 </div>
 <p><strong>Hold SH in</strong> (the trainer/test switch) in step 4 and menu 6, and all surfaces go to center. This is handy for comparing with neutral. It needs a few free mixes. If the model is nearly full, the hint “Hold SH in” is not shown on the screen.</p>
-<p>The values per flight mode apply to the flight mode the radio is in. Change flight mode with the switch while adjusting. The aileron differential is set with trim T3 in flight, with its own value per flight mode.</p>
+<p>The values per flight mode apply to the flight mode the radio is in. Change flight mode with the switch while adjusting. The differential is set with the trim in flight: aileron with T3, with its own value per flight mode, and V-tail with T5, the same in all flight modes.</p>
 
 <h3>Flightscreen</h3>
 <p>Open <strong>F3X.no → Flightscreen</strong> before launch and leave it open during the flight. The times come from the model's timers (step 5 writes them when the model has a motor), so they keep counting if you close the screen – but the voice and the log only run while it is open.</p>
@@ -172,6 +173,19 @@
 
 <h3>Flight modes</h3>
 <p>Normal (FM0) when no other is on. Landing (FM1) comes on at 10 % crow and cuts the motor. The motor stays locked until the motor switch is set to off again. Speed (FM3) and Thermal (FM4) on their own switch. With a motor: separate flight modes per motor step with their own elevator trim. English voice callouts when the mode changes.</p>
+
+<h3 id="models">Models: select, new, rename and delete</h3>
+<p>F3X.no has no model screen of its own, because Lua in EdgeTX cannot switch models. Use the EdgeTX model screen (<strong>Manage Models</strong>). Open it with a <strong>long press on MDL</strong>.</p>
+<div class="tablewrap">
+<table>
+  <tr><td><strong>Select a model</strong></td><td>Double-tap the model and choose <strong>Select model</strong>.</td></tr>
+  <tr><td><strong>New model</strong></td><td>Tap <strong>New Model</strong> in the upper right corner and choose <strong>Blank Model</strong>. Name the model first (see below), then run the Setup wizard from step P/0.</td></tr>
+  <tr><td><strong>Rename</strong></td><td>Select the model, short press <strong>MDL</strong> and change <strong>Name</strong> under Model Setup.</td></tr>
+  <tr><td><strong>Copy</strong></td><td>Double-tap and choose <strong>Duplicate model</strong>. The copy gets the same name; rename it.</td></tr>
+  <tr><td><strong>Delete</strong></td><td>Double-tap a model that is <em>not</em> active and choose <strong>Delete model</strong>. The file is moved to the deleted-models folder on the SD card.</td></tr>
+</table>
+</div>
+<p><strong>Important:</strong> The wizard stores its progress and values (throws, menu 6) by <strong>model name</strong>, in <code>SCRIPTS/RM/DATA/m_&lt;name&gt;.lua</code>. If you rename the model, the wizard sees it as new: the setup in the radio is unchanged, but the steps show as not done. Two models with the same name share progress, so rename a copy right away. Names with spaces and special characters work, but become “_” in the file name.</p>
 
 <h2 id="trouble">6. Troubleshooting</h2>
 <div class="tablewrap">

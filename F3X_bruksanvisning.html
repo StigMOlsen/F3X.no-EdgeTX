@@ -126,7 +126,7 @@
 <div class="tablewrap">
 <table>
   <tr><th>Steg</th><th>Hva du gjør</th></tr>
-  <tr><td><span class="step">P</span> Pilotoppsett</td><td>Velg bryter for hver funksjon ved å flippe den. Standard: SE Termikk/Speed, SD motor av/på, SG motorkraft, SH lære-/testbryter, RS camber, Throttle = butterfly, T3 aileron-differensial, S1 volum. Valgfritt: vario av/på og ekstra kanal av/på (CH8, −100 % av / +100 % på). «Kanaler» setter kanalene.</td></tr>
+  <tr><td><span class="step">P</span> Pilotoppsett</td><td>Velg bryter for hver funksjon ved å flippe den. Standard: SE Termikk/Speed, SD motor av/på, SG motorkraft, SH lære-/testbryter, RS camber, Throttle = butterfly, T3 aileron-differensial, T5 V-hale-differensial, S1 volum. Valgfritt: vario av/på og ekstra kanal av/på (CH8, −100 % av / +100 % på). «Kanaler» setter kanalene.</td></tr>
   <tr><td><span class="step">0</span> Flykonfigurasjon</td><td>2 eller 4 vingeservoer, kryss- eller V-hale, motor og hvilke flymoduser som brukes.</td></tr>
   <tr><td><span class="step">1</span> Servoretning</td><td>Hold lære-/testbryteren (SH) inne: alle ror skal gå ned, sideroret til høyre. Trykk «Reverser» der det går feil vei.</td></tr>
   <tr><td><span class="step">2</span> Senter</td><td>Still hvert ror nøytralt med S1/S2. Vanlige ror bruker PPM-senter (±500 µs). Flaps bruker subtrim, og over 100 % fortsetter det i PPM-senter (til ca. ±195 %), fordi flappens nøytral kan ligge langt ut mot den ene enden.</td></tr>
@@ -148,11 +148,12 @@
   <tr><td><strong>Aileron → sideror</strong></td><td>Per flymodus. Standard 0 %. «Kopier alle FM» gir samme verdi i alle.</td></tr>
   <tr><td><strong>Kikkflapp</strong></td><td>Først maks per ror (liten, standard 20 %), så hvor mye som brukes i hver flymodus (standard 0 %). Ikke i Landing.</td></tr>
   <tr><td><strong>Aileron → flaps</strong></td><td>Ned i % av flappens utslag ned og opp i % av flappens utslag opp, likt for begge flaps (standard 0 %). Mens du stiller ned eller opp, står begge flapsene på det utslaget, så det kan måles. Så hvor mye av dette som brukes i hver flymodus: 100 % = nøyaktig utslaget du satte i ned og opp (standard 100 %, Landing 0 %).</td></tr>
+  <tr><td><strong>Differensial og expo</strong></td><td>Hvor mye av utslaget ned trimmen kan endre: aileron med T3 og V-hale (sideroret) med T5. Standard 30 %: full trim gir 30 % mindre (eller mer) utslag ned. Skjermen viser hvor trimmen står nå og hva den gir. Deretter expo på aileron, høyderor, sideror og butterfly: negativ = mykere rundt senter av stikka (butterfly: mykere i starten av crow), standard 0 %. Fullt utslag endres ikke. Grafen viser kurven. Expo er lik i alle flymoduser.</td></tr>
   <tr><td><strong>Motor</strong></td><td>Motornivå Liten/Medium/Full og motor → høyderor.</td></tr>
 </table>
 </div>
 <p><strong>Hold SH inne</strong> (lære-/testbryteren) i steg 4 og meny 6, så står alle rorene i senter. Det er nyttig for å sammenligne mot nøytral. Det krever noen få ledige mikser. Er modellen nesten full, vises ikke hintet «Hold SH inne» på skjermen.</p>
-<p>Verdiene per flymodus gjelder den flymodusen radioen står i. Bytt flymodus med bryteren mens du justerer. Aileron-differensialen stilles med trimmen T3 i lufta, med egen verdi per flymodus.</p>
+<p>Verdiene per flymodus gjelder den flymodusen radioen står i. Bytt flymodus med bryteren mens du justerer. Differensialen stilles med trimmen i lufta: aileron med T3, med egen verdi per flymodus, og V-hale med T5, lik i alle flymoduser.</p>
 
 <h3>Flightscreen</h3>
 <p>Åpne <strong>F3X.no → Flightscreen</strong> før du starter, og la skjermen stå åpen under flygingen. Tidene kommer fra modellens timere (steg 5 skriver dem når flyet har motor), så de teller videre selv om du lukker skjermen – men stemmen og loggen kommer bare mens den er åpen.</p>
@@ -172,6 +173,19 @@
 
 <h3>Flymoduser</h3>
 <p>Normal (FM0) når ingen annen er på. Landing (FM1) slår inn ved 10 % crow og kutter motoren. Motoren er sperret til motorbryteren settes av igjen. Speed (FM3) og Termikk (FM4) på egen bryter. Med motor: egne flymoduser per motortrinn med eget høyderorstrim. Norske stemmeutrop ved bytte.</p>
+
+<h3 id="modeller">Modeller: velge, ny, navn og slett</h3>
+<p>F3X.no har ingen egen modellskjerm, fordi Lua i EdgeTX ikke kan bytte modell. Bruk modellskjermen i EdgeTX (<strong>Manage Models</strong>). Den åpnes med <strong>langt trykk på MDL</strong>.</p>
+<div class="tablewrap">
+<table>
+  <tr><td><strong>Velge modell</strong></td><td>Dobbelttrykk på modellen og velg <strong>Select model</strong>.</td></tr>
+  <tr><td><strong>Ny modell</strong></td><td>Trykk <strong>New Model</strong> øverst til høyre og velg <strong>Blank Model</strong>. Gi modellen navn først (se under), og kjør så Oppsettveiviseren fra steg P/0.</td></tr>
+  <tr><td><strong>Endre navn</strong></td><td>Velg modellen, trykk kort på <strong>MDL</strong> og endre <strong>Name</strong> under Model Setup.</td></tr>
+  <tr><td><strong>Kopiere</strong></td><td>Dobbelttrykk og velg <strong>Duplicate model</strong>. Kopien får samme navn; gi den nytt navn.</td></tr>
+  <tr><td><strong>Slette</strong></td><td>Dobbelttrykk på en modell som <em>ikke</em> er aktiv og velg <strong>Delete model</strong>. Filen flyttes til mappen for slettede modeller på SD-kortet.</td></tr>
+</table>
+</div>
+<p><strong>Viktig:</strong> Veiviseren lagrer fremdriften og verdiene (utslag, meny 6) etter <strong>modellnavnet</strong>, i <code>SCRIPTS/RM/DATA/m_&lt;navn&gt;.lua</code>. Endrer du navnet, ser veiviseren modellen som ny: oppsettet i radioen er uendret, men stegene står som ikke gjort. To modeller med samme navn deler fremdrift, så gi en kopi nytt navn med en gang. Navn med æøå og mellomrom virker, men gjøres om til «_» i filnavnet.</p>
 
 <h2 id="feil">6. Feilsøking</h2>
 <div class="tablewrap">

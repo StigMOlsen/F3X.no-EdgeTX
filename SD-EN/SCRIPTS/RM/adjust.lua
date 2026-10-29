@@ -553,6 +553,72 @@ return function(L, STD, W, S)
     return A.adjustScreen(def)
   end
 
+  -- Differensial-trim og expo (bestemt 2026-10-29). Differensial: hvor mye av utslaget ned trimmen kan endre.
+  -- Aileron med T3 (egen verdi per FM), V-hale (sideroret) med T5 (lik i alle FM).
+  local function diffScreen()
+    local def = { title = "Differential and expo", doneText = "Differential and expo saved" }
+    local trims = {}
+    function def.entries(st, prof)
+      local list = {}
+      local function entry(kind, key, pf, label, roles, what)
+        local t = pf and pf.trim
+        local id = t and L.trimSource(t)
+        if not id then return end
+        trims[kind] = { label = t, id = id }
+        list[#list + 1] = {
+          label = label, min = 0, max = 100, span = 50, roles = roles, kind = kind,
+          fmt = function(v) return v .. " % of the throw" end,
+          hint = { t .. " at full changes " .. what .. " down by that", "much, one way or the other. Default " .. V[key] .. " %." },
+          get = function() return st.adj[key] end,
+          set = function(_, v) st.adj[key] = v; S.applyDiff(st, prof, kind) end,
+        }
+      end
+      entry("ail", "diffTrim", prof.difftrim, "Aileron differential", { "ailL", "ailR" }, "aileron")
+      if st.cfg.tail == "V" then
+        entry("rud", "vdiffTrim", prof.vdifftrim, "V-tail differential", { "vL", "vR" }, "the rudder")
+      end
+      -- Expo, lik i alle FM: negativ = mykt rundt senter (butterfly: mykt i starten av crow)
+      local function expo(f, label, roles, crow)
+        list[#list + 1] = {
+          label = label, min = -100, max = 100, span = 50, roles = roles,
+          fmt = function(v)
+            if v == 0 then return "0 % (linear)" end
+            return v .. " %" .. (v < 0 and " (soft " or " (hard ") .. (crow and "at the start)" or "center)")
+          end,
+          hint = crow and { "Negative = soft at the start of crow,", "positive = more crow early. Full crow is the same." }
+            or { "Negative = soft around stick center,", "positive = harder. Full throw is the same." },
+          -- Grafen: utslag over stikka (butterfly: fra crow av til full crow)
+          graph = function(v)
+            local pts = {}
+            for i = 0, 8 do
+              local x = crow and i / 8 or (i - 4) / 4
+              pts[#pts + 1] = { L.round(crow and (x * 200 - 100) or x * 100), L.round(100 * S.expo(x, -v)) }
+            end
+            return pts, { range = 100, cursor = not crow and (getValue(f) or 0) / 10.24 or nil }
+          end,
+          get = function() return st.adj.expo[f] end,
+          set = function(_, v) st.adj.expo[f] = v; S.applyExpo(st, prof, f) end,
+        }
+      end
+      expo("ail", "Expo aileron", { "ailL", "ailR" })
+      expo("ele", "Expo elevator", ELEV_ROLES)
+      expo("rud", "Expo rudder", RUD_ROLES)
+      if prof.crow and L.ctrl(prof.crow.ctrl) then
+        expo("crow", "Expo butterfly", { "ailL", "ailR", "flapL", "flapR" }, true)
+      end
+      return list
+    end
+    -- Trimmen nå og hvor mye den endrer ned-utslaget med verdien som stilles
+    function def.info(s, e, x, y)
+      local t = trims[e.kind]
+      if not t then return end
+      local tr = L.round((getValue(t.id) or 0) / 10.24)
+      L.text(x, y, t.label .. " now: " .. tr .. " %  =  " .. L.round(tr * s.val / 100) .. " % of the down throw", SMLSIZE)
+    end
+    def.empty = "Choose a trim button for differential in Pilot setup."
+    return A.adjustScreen(def)
+  end
+
   function A.menuScreen()
     local s = {}
     local items = {
@@ -564,6 +630,7 @@ return function(L, STD, W, S)
           nil, RUD_ROLES)
       end },
       { "Snap flap (per FM)", snapScreen },
+      { "Differential and expo", diffScreen },
       { "Aileron -> flaps (per FM)", ailFlapScreen, function(st) return st.cfg.wing >= 4 end },
       { "Motor: level and elevator", motorScreen, function(st) return st.cfg.motor end },
     }
@@ -580,8 +647,8 @@ return function(L, STD, W, S)
         L.btn(list, 20, 56 + (i - 1) * 39, 500, 34, it[1], en and function() L.push(it[2]()) end or nil, { left = true, icon = true })
       end
       L.text(540, 62, "Differential:", SMLSIZE, L.C.dim)
-      L.text(540, 86, "Set with the trim in flight,", SMLSIZE, L.C.dim)
-      L.text(540, 110, "own value in each flight mode.", SMLSIZE, L.C.dim)
+      L.text(540, 86, "Trim in flight: Ail T3 own per FM,", SMLSIZE, L.C.dim)
+      L.text(540, 110, "V-tail T5 same in all FM.", SMLSIZE, L.C.dim)
       L.text(540, 150, "Per FM: change flight mode with", SMLSIZE, L.C.dim)
       L.text(540, 174, "the switch while adjusting.", SMLSIZE, L.C.dim)
       L.btnRow(list, { { "Back", function() L.pop() end } })

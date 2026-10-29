@@ -6,7 +6,8 @@ return {
   version = "0.2",
   -- Øk når mikserne, kurvene eller bryterne som skrives endres: et oppsett skrevet med en
   -- eldre versjon skrives da på nytt automatisk når veiviseren eller meny 6 åpnes.
-  planVersion = 6,   -- 4: timerne uten minuttpip (flyskjermen gir stemmen), 5: ekstra av/på-kanal, 6: motor 1003-1998 µs
+  planVersion = 7,   -- 4: timerne uten minuttpip (flyskjermen gir stemmen), 5: ekstra av/på-kanal, 6: motor 1003-1998 µs,
+                     -- 7: differensial-trim med trimområde, V-hale-differensial (T5, felles i alle FM)
 
   -- Kanalstandard, flyet sett bakfra (6d). V-hale bruker kanalene til Elev og Rud.
   -- Piloten kan endre kanalene i pilotoppsettet (P.applyChannels skriver over ch).
@@ -57,6 +58,9 @@ return {
       default = { ctrl = "thr", rev = false } },
     { key = "difftrim", label = "Ail differential", kind = "trim",
       default = { trim = "T3" } },
+    -- Bare i bruk på V-hale: trimmen endrer ned-siden av sideroret på begge rorene
+    { key = "vdifftrim", label = "V-tail differential", kind = "trim",
+      default = { trim = "T5" } },
     { key = "volume", label = "Volume", kind = "axis", optional = true,
       accept = { "pot", "slider" }, ends = { "Low", "High" }, default = { ctrl = "s1", rev = false } },
     { key = "landing", label = "Landing (FM1)", kind = "pos", fm = true, optional = true, auto = true,
@@ -95,6 +99,12 @@ return {
     motorMin = -971, motorMax = 973,
     flapSlow = 5,                      -- tideler sekund, servohastighet flaps (bare camber, ikke crow)
     ailDown = 60,                      -- % aileron ned (differensial i steg 4), opp = 100
+    -- Differensial-trim (bestemt 2026-10-29): full trim endrer ned-utslaget med så mange % av
+    -- utslaget (begge veier). Aileron med T3, V-hale (sideroret) med T5. Stilles i meny 6.
+    diffTrim = 30, vdiffTrim = 30,
+    -- Expo (bestemt 2026-10-29), lik i alle FM, i meny 6. Negativ = mykt rundt senter (butterfly:
+    -- mykt i starten av crow), 0 = lineær. Stikkene går via CH22-24 bare når expo ikke er 0.
+    expo = { ail = 0, ele = 0, rud = 0, crow = 0 },
     -- Camber per ror (bestemt 2026-10-26): i Termikk og i Speed går kontrollen fra minst
     -- utslag fram (Min) til mest utslag bak (Max). Negativ = ror ned.
     camber = { flap = { tMax = -15, tMin = 0, sMax = 5, sMin = 0 },
@@ -150,7 +160,8 @@ return {
   },
 
   -- Virtuelle kanaler: én verdi per flymodus, brukt av mikserne på rorene
-  vch = { snap = 17, ailRud = 18, ailFlap = 19, camber = 20, crowDiff = 21 },
+  vch = { snap = 17, ailRud = 18, ailFlap = 19, camber = 20, crowDiff = 21,
+          expoAil = 22, expoEle = 23, expoRud = 24 },   -- stikka med expo (bare når expo ikke er 0)
 
   -- Kurver (indeks 0-basert) og logiske brytere (0 = L1) som veiviseren eier
   curves = { flapL = 0, flapR = 1, ailL = 2, ailR = 3, tipL = 4, tipR = 5,

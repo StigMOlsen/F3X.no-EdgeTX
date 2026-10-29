@@ -235,7 +235,14 @@ function L.trimIndex(label)   -- "T3" -> 2 (0-basert)
 end
 function L.trimSource(label)
   local i = L.trimIndex(label)
-  return i and TRIM_NAMES[i + 1] and L.findSource(TRIM_NAMES[i + 1]) or nil
+  if not (i and TRIM_NAMES[i + 1]) then return nil end
+  local id = L.findSource(TRIM_NAMES[i + 1])
+  -- T5/T6 uten navn: trimkildene ligger etter hverandre (diag: trim-rud 121 .. trim-ail 124)
+  if not id and i >= 4 then
+    local ail = L.findSource(TRIM_NAMES[4])
+    id = ail and ail + i - 3
+  end
+  return id
 end
 
 ------------------------------------------------------------------------
