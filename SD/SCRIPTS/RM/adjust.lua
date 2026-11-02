@@ -30,7 +30,9 @@ return function(L, STD, W, S)
 
   ----------------------------------------------------------------------
   -- Felles justeringsskjerm.
-  -- def = { title, entries = function() -> liste, done(), leave(), select(k) -> k }
+  -- def = { title, entries = function() -> liste, done(), leave(), select(k) -> k,
+  --         quick(st) -> true: lagre og gå ut fra hver verdi (standard: oppsettet er skrevet),
+  --         quickLabel }
   -- entry = { label, hint, get(fm), set(fm, v), min, max, span, unit, fm, prep(), fmt(v) }
 
   function A.adjustScreen(def)
@@ -63,6 +65,8 @@ return function(L, STD, W, S)
       s.keys = L.keysNew()
       S.defaults(s.st)
       s.entries = def.entries(s.st, s.prof)
+      -- Gjort før: Tilbake byttes mot en knapp som lagrer og går ut
+      if def.quick then s.quick = def.quick(s.st) else s.quick = s.st.done.mix end
       -- Testbryteren inne: alle ror i senter, så de er lette å sammenligne mot. Bare når det
       -- er plass til både disse og testmiksene som viser verdiene.
       local test = s.prof.test and L.ctrl(s.prof.test.ctrl)
@@ -122,9 +126,10 @@ return function(L, STD, W, S)
       end
     end
 
-    local function confirm()
+    -- out: lagre denne verdien og gå ut, uten å bla gjennom resten
+    local function confirm(out)
       commit()
-      if not def.select and s.k < #s.entries then
+      if not def.select and s.k < #s.entries and not out then
         s.k = s.k + 1
         setup()
       else
@@ -200,11 +205,13 @@ return function(L, STD, W, S)
       L.dualHint(s.dual, 12, 385)
       L.dualWait(s.dual, 430, 362)
       if s.shLabel then L.text(12, 362, "Hold " .. s.shLabel .. " inne: alle ror i senter.", SMLSIZE, L.C.dim) end
-      local items = {
-        { "Avbryt", cancel },
-        { "Tilbake", function() commit(); s.k = s.k - 1; setup() end, { enabled = s.k > 1 and not def.select } },
-        { "Nullstill pot", function() s.base = s.val; L.dualStart(s.dual, true) end },
-      }
+      local quick = s.quick and not def.select and #s.entries > 1
+      local items = { { "Avbryt", cancel } }
+      if not quick then
+        items[#items + 1] = { "Tilbake", function() commit(); s.k = s.k - 1; setup() end,
+          { enabled = s.k > 1 and not def.select } }
+      end
+      items[#items + 1] = { "Nullstill pot", function() s.base = s.val; L.dualStart(s.dual, true) end }
       if e.fm then
         items[#items + 1] = { "Kopier alle FM", function()
           commit()
@@ -216,7 +223,12 @@ return function(L, STD, W, S)
         end }
       end
       local last = def.select or s.k == #s.entries
-      items[#items + 1] = { last and "Ferdig" or "Bekreft", confirm }
+      if quick then
+        if not last then items[#items + 1] = { "Bekreft", function() confirm() end, { primary = false } } end
+        items[#items + 1] = { def.quickLabel or "Ferdig", function() confirm(true) end }
+      else
+        items[#items + 1] = { last and "Ferdig" or "Bekreft", function() confirm() end }
+      end
       L.btnRow(list, items)
       -- Trykk på et ror: hopp til første verdi for det roret
       if not def.select then
@@ -247,7 +259,8 @@ return function(L, STD, W, S)
     local MAX = L.findSource({ "max", "MAX" })
     local chans = {}
     local function clearAll() for ch in pairs(chans) do L.tmpClear(ch) end end
-    local def = { title = "4 - Utslag", doneText = "Utslag lagret" }
+    local def = { title = "4 - Utslag", doneText = "Utslag lagret", quickLabel = "Lagre og skriv" }
+    function def.quick(st) return st.done.rates end
 
     function def.entries(st)
       local list = {}
@@ -637,8 +650,11 @@ return function(L, STD, W, S)
 
     function s:enter()
       s.st = W.state()
+      s.prof = W.profile() or {}
       W.upgrade()
     end
+
+    local function trimName(pf) return (pf and pf.trim) or "-" end
 
     function s:draw(list)
       L.header("6 - Justering", fmName(currentFM()))
@@ -647,8 +663,11 @@ return function(L, STD, W, S)
         L.btn(list, 20, 56 + (i - 1) * 39, 500, 34, it[1], en and function() L.push(it[2]()) end or nil, { left = true, icon = true })
       end
       L.text(540, 62, "Differensial:", SMLSIZE, L.C.dim)
-      L.text(540, 86, "Trim i lufta: Ail T3 egen per FM,", SMLSIZE, L.C.dim)
-      L.text(540, 110, "V-hale T5 lik i alle FM.", SMLSIZE, L.C.dim)
+      local prof = s.prof or {}
+      L.text(540, 86, "Trim i lufta: Ail " .. trimName(prof.difftrim) .. " egen per FM,", SMLSIZE, L.C.dim)
+      if s.st.cfg and s.st.cfg.tail == "V" then
+        L.text(540, 110, "V-hale " .. trimName(prof.vdifftrim) .. " lik i alle FM.", SMLSIZE, L.C.dim)
+      end
       L.text(540, 150, "Per FM: bytt flymodus med", SMLSIZE, L.C.dim)
       L.text(540, 174, "bryteren mens du justerer.", SMLSIZE, L.C.dim)
       L.btnRow(list, { { "Tilbake", function() L.pop() end } })
@@ -772,7 +791,7 @@ return function(L, STD, W, S)
       L.text(560, 180, s.st.alarms and "Alarmer: lagt inn" or "Alarmer: ikke lagt inn", SMLSIZE,
         s.st.alarms and L.C.ok or L.C.dim)
       L.btnRow(list, {
-        { "Tilbake", function() L.pop() end },
+        { "Tilbake", function() L.pop() end, { default = true } },
         { "Legg inn alarmer", function()
           if not L.findSource({ "RQly" }) and not L.findSource({ "RxBt" }) then
             L.toast("Ingen telemetri ennå. Bind og slå på mottakeren.", true)

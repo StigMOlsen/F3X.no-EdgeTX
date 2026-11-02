@@ -635,6 +635,7 @@ return function(L, STD, W)
     local rep, bad = {}, 0
     local function fail(t) rep[#rep + 1] = "! " .. t; bad = bad + 1 end
     local owned = ownedChannels(st, p)
+    local oldCh, oldAux = st.ownedCh or {}, st.auxCh
     st.ownedCh = {}
     for k, ch in pairs(STD.ch) do
       if k ~= "aux" or p.mixes[ch] then st.ownedCh[#st.ownedCh + 1] = ch end
@@ -668,8 +669,20 @@ return function(L, STD, W)
         if ok then written = written + 1 else fail("Mix " .. m.name .. " CH" .. ch .. ": " .. tostring(e)) end
       end
     end
+    -- Kanaler som piloten har flyttet et ror bort fra: navn og grenser tilbake til standard,
+    -- så det ikke står to «Ail V» eller motorgrensene på en tom kanal
+    local inUse = {}
+    for k, ch in pairs(STD.ch) do if k ~= "aux" or p.mixes[ch] then inUse[ch] = true end end
+    for _, ch in pairs(VCH) do inUse[ch] = true end
+    for _, ch in ipairs(oldCh) do
+      if not inUse[ch] and ch == oldAux then L.setOutput(ch - 1, { name = "" })   -- grensene er pilotens
+      elseif not inUse[ch] and ch ~= STD.ch.aux then
+        L.setOutput(ch - 1, { name = "", min = -1000, max = 1000, offset = 0, ppmCenter = 0, revert = 0 })
+      end
+    end
     for _, c in ipairs(W.channels(st.cfg, true)) do L.setOutput(c.ch - 1, { name = c.name }) end
     for ch, name in pairs(p.outputs) do L.setOutput(ch - 1, { name = name }) end
+    if st.auxCh then L.setOutput(st.auxCh - 1, { name = STD.names.aux }) end
     if st.cfg.motor then   -- motor av 1003 µs, full 1998 µs
       L.setOutput(STD.ch.motor - 1, { min = V.motorMin, max = V.motorMax, ppmCenter = 0 })
     end

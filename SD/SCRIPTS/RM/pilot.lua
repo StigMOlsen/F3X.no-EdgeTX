@@ -147,6 +147,7 @@ return function(L, STD)
       s.det = nil
       s.warn = nil
       s.cur = L.copy(prof[fn().key] or { none = true })
+      s.focusSet = nil   -- rullehjulet tilbake på Neste for hver funksjon
     end
 
     local function finish()
@@ -211,7 +212,8 @@ return function(L, STD)
 
     local function drawPositions(f, c, x, y)
       local v = L.value(c)
-      local p = L.pos(v)
+      -- Posisjonsfunksjon: vis valgt posisjon (fra profilen eller bryteren), ikke bare hvor bryteren står
+      local p = (f.kind == "pos" and s.cur and s.cur.ctrl == c.key and s.cur.pos) or L.pos(v)
       local list
       if c.type == "3pos" then list = { -1, 0, 1 } else list = { -1, 1 } end
       for i, q in ipairs(list) do
@@ -230,7 +232,7 @@ return function(L, STD)
 
     function s:draw(list)
       local f = fn()
-      L.header("Steg P - Pilotoppsett", s.idx .. " / " .. #P.FUNCS)
+      L.header("Pilotoppsett", s.idx .. " / " .. #P.FUNCS)
 
       -- Venstre: alle funksjoner
       for i, g in ipairs(P.FUNCS) do
@@ -306,8 +308,6 @@ return function(L, STD)
       end
       items[#items + 1] = { (single or s.idx == #P.FUNCS) and "Ferdig" or "Neste", commit }
       L.btnRow(list, items)
-      -- Rullehjulet starter på «Neste»
-      if not s.focusSet then s.focus = #list; s.focusSet = true end
     end
 
     return s
@@ -413,7 +413,7 @@ return function(L, STD)
     function s:resume() s.saved = P.load() end
 
     function s:draw(list)
-      L.header("Steg P - Pilotoppsett")
+      L.header("Pilotoppsett")
       local items = {}
       if s.saved then
         local p = P.complete(L.copy(s.saved))
@@ -426,15 +426,15 @@ return function(L, STD)
         end
         items = {
           { "Tilbake", function() L.pop() end },
-          { "Bruk lagret", done },
           { "Endre enkeltvalg", function() L.push(P.overviewScreen(p, done)) end },
           { "Gå gjennom alle", function() walk(p) end },
+          { "Bruk lagret", done },
         }
       else
         L.text(20, 70, "Ingen pilotprofil er lagret ennå.", MIDSIZE)
         L.text(20, 120, "Du går gjennom funksjonene en og en. For hver funksjon flipper du")
         L.text(20, 148, "bryteren, eller vrir potten eller skyveren, du vil bruke.")
-        L.text(20, 176, "Forslaget er Stigs oppsett. Trykk Neste for å beholde forslaget.")
+        L.text(20, 176, "Forslaget er standardoppsettet. Trykk Neste for å beholde det.")
         L.text(20, 220, "Profilen gjelder alle modellene på denne radioen.", 0, L.C.dim)
         items = {
           { "Tilbake", function() L.pop() end },

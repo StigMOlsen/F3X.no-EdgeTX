@@ -147,6 +147,7 @@ return function(L, STD)
       s.det = nil
       s.warn = nil
       s.cur = L.copy(prof[fn().key] or { none = true })
+      s.focusSet = nil   -- rullehjulet tilbake på Neste for hver funksjon
     end
 
     local function finish()
@@ -211,7 +212,8 @@ return function(L, STD)
 
     local function drawPositions(f, c, x, y)
       local v = L.value(c)
-      local p = L.pos(v)
+      -- Posisjonsfunksjon: vis valgt posisjon (fra profilen eller bryteren), ikke bare hvor bryteren står
+      local p = (f.kind == "pos" and s.cur and s.cur.ctrl == c.key and s.cur.pos) or L.pos(v)
       local list
       if c.type == "3pos" then list = { -1, 0, 1 } else list = { -1, 1 } end
       for i, q in ipairs(list) do
@@ -230,7 +232,7 @@ return function(L, STD)
 
     function s:draw(list)
       local f = fn()
-      L.header("Step P - Pilot setup", s.idx .. " / " .. #P.FUNCS)
+      L.header("Pilot setup", s.idx .. " / " .. #P.FUNCS)
 
       -- Venstre: alle funksjoner
       for i, g in ipairs(P.FUNCS) do
@@ -306,8 +308,6 @@ return function(L, STD)
       end
       items[#items + 1] = { (single or s.idx == #P.FUNCS) and "Done" or "Next", commit }
       L.btnRow(list, items)
-      -- Rullehjulet starter på «Neste»
-      if not s.focusSet then s.focus = #list; s.focusSet = true end
     end
 
     return s
@@ -413,7 +413,7 @@ return function(L, STD)
     function s:resume() s.saved = P.load() end
 
     function s:draw(list)
-      L.header("Step P - Pilot setup")
+      L.header("Pilot setup")
       local items = {}
       if s.saved then
         local p = P.complete(L.copy(s.saved))
@@ -426,15 +426,15 @@ return function(L, STD)
         end
         items = {
           { "Back", function() L.pop() end },
-          { "Use saved", done },
           { "Change one item", function() L.push(P.overviewScreen(p, done)) end },
           { "Go through all", function() walk(p) end },
+          { "Use saved", done },
         }
       else
         L.text(20, 70, "No pilot profile saved yet.", MIDSIZE)
         L.text(20, 120, "You go through the functions one by one. For each one, flip")
         L.text(20, 148, "the switch, or turn the pot or slider, you want to use.")
-        L.text(20, 176, "The suggestion is Stig's setup. Press Next to keep it.")
+        L.text(20, 176, "The suggestion is the standard setup. Press Next to keep it.")
         L.text(20, 220, "The profile applies to all models on this radio.", 0, L.C.dim)
         items = {
           { "Back", function() L.pop() end },

@@ -160,8 +160,11 @@ return function(L, STD)
       L.header(kind == "q" and "Graph: link (RQly)" or ("Graph: " .. (info.cells and "motor battery" or "battery")),
         n > 0 and F.clock(h.t[n]) or nil)
       local lo, hi = range(h)
-      local t0, t1 = n > 0 and h.t[1] or 0, n > 0 and h.t[n] or 1
-      if t1 <= t0 then t1 = t0 + 1 end
+      -- Fast tidsakse på graphSpan (30 min) fra start. Lengre flyging: de siste 30 min.
+      local t1 = math.max(V.graphSpan, n > 0 and h.t[n] or 0)
+      local t0 = t1 - V.graphSpan
+      local first = 1   -- første punkt i vinduet
+      while first < n and h.t[first] < t0 do first = first + 1 end
       local function X(t) return X0 + (X1 - X0) * (t - t0) / (t1 - t0) end
       local function Y(v) return Y1 - (Y1 - Y0) * (L.clamp(v, lo, hi) - lo) / (hi - lo) end
 
@@ -177,6 +180,11 @@ return function(L, STD)
           L.text(X1 + 4, y - 8, string.format("%.2f", v / info.cells), SMLSIZE, L.C.dim)
         end
       end
+      -- Loddrette linjer hvert 5. minutt
+      for t = t0 - t0 % 300 + 300, t1 - 1, 300 do
+        local x = floor(X(t) + 0.5)
+        line(x, Y0, x, Y1, L.C.off, DOTTED)
+      end
       lcd.drawRectangle(X0, Y0, X1 - X0, Y1 - Y0, L.C.edge)
       L.text(X0 - 8, Y0 - 22, kind == "q" and "%" or "V", SMLSIZE + RIGHT, L.C.dim)
       if kind == "v" and info.cells then L.text(X1 + 4, Y0 - 22, "V/c", SMLSIZE, L.C.dim) end
@@ -186,7 +194,7 @@ return function(L, STD)
       if warnV and warnV > lo and warnV < hi then line(X0, Y(warnV), X1, Y(warnV), L.C.warn, DOTTED) end
 
       -- Motor på: oransje stripe under grafen
-      for i = 1, n - 1 do
+      for i = first, n - 1 do
         if h.m[i] == 1 then
           lcd.drawFilledRectangle(floor(X(h.t[i])), Y1 + 3, max(1, floor(X(h.t[i + 1]) - X(h.t[i]) + 0.5)), 6, L.C.act)
         end
@@ -205,7 +213,7 @@ return function(L, STD)
           vMin = (vMin and math.min(vMin, v)) or v
           vSum, vN = (vSum or 0) + v, (vN or 0) + 1
         end
-        if i > 1 then
+        if i > first then
           local a = vals[i - 1]
           if kind == "q" or (a > 0 and v > 0) then
             local c = L.C.ok
@@ -232,7 +240,7 @@ return function(L, STD)
           if pw > 0 then
             pMax = max(pMax or 0, pw)
             pSum, pN = (pSum or 0) + pw, (pN or 0) + 1
-            if i < n then
+            if i < n and i >= first then
               local xa, xb, y = X(h.t[i]), X(h.t[i + 1]), PY(pw)
               line(xa, y, xb, y, L.C.pwr)
               line(xa, y + 1, xb, y + 1, L.C.pwr)
@@ -550,7 +558,7 @@ return function(L, STD)
               confirmUntil = getTime() + 300
             end
           end, { enabled = not st.run and st.started == true, primary = false } },
-        { "Back", function() L.pop() end, { primary = false } },
+        { "Back", function() L.pop() end, { primary = false, default = true } },
       })
       if st.logFail then L.text(400, 382, "Could not write the flight log (/LOGS)", SMLSIZE + CENTER, L.C.warn) end
     end

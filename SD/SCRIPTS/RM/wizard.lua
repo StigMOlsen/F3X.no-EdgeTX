@@ -194,7 +194,11 @@ return function(L, STD, P)
       W.upgrade()
     end
 
-    function s:enter() refresh() end
+    -- Pilotoppsettet ligger i F3X.no-menyen. Mangler profilen, åpnes det her først.
+    function s:enter()
+      refresh()
+      if not s.prof then s.autoWrite = true; L.push(P.startScreen(nil)) end
+    end
     function s:resume()
       refresh()
       if s.autoWrite then s.autoWrite = false; W.autoWrite() end
@@ -211,7 +215,6 @@ return function(L, STD, P)
       -- Steg som endrer oppsettet: skriv automatisk når du kommer tilbake hit
       local function pushW(f) return function() s.autoWrite = true; L.push(f()) end end
       local rows = {
-        { "P   Pilotoppsett", s.prof and "lagret" or "mangler", pushW(function() return P.startScreen(nil) end), true },
         { "0   Flykonfigurasjon", cfg and W.cfgText(cfg) or "ikke satt", pushW(W.configScreen), s.prof ~= nil },
         { "1   Servoretning", d.dir and "ferdig" or "-", pushW(W.dirScreen), ready },
         { "2   Senter (PPM-senter)", d.center and "ferdig" or "-", pushW(W.centerScreen), ready and d.dir },
@@ -237,20 +240,20 @@ return function(L, STD, P)
         L.text(20, 388, "PAGE>/< eller knapp 1-6 hopper uten å lagre. Bare Lagre/Bekreft lagrer.", SMLSIZE, L.C.dim)
       end
       if not s.prof then
-        L.text(20, 340, "Start med pilotoppsettet (P).", SMLSIZE, L.C.dim)
+        L.text(20, 340, "Lagre pilotoppsettet først (F3X.no -> Pilotoppsett).", SMLSIZE, L.C.dim)
       elseif not cfg then
         L.text(20, 340, "Sett flykonfigurasjonen (0) før de andre stegene.", SMLSIZE, L.C.dim)
       elseif not d.mix then
         L.text(20, 340, "Kjør 1-4 og skriv oppsettet (5). Juster deretter i 6.", SMLSIZE, L.C.dim)
       else
-        L.text(20, 340, "Endret noe i P, 0 eller 4? Skriv oppsettet (5) på nytt.", SMLSIZE, L.C.dim)
+        L.text(20, 340, "Endret noe i 0 eller 4? Skriv oppsettet (5) på nytt.", SMLSIZE, L.C.dim)
       end
       L.btn(list, 20, 418, 220, 54, "Avslutt", function() L.quit() end)
       if not s.focusSet then
         s.focusSet = true
         s.focus = 1
         for i, r in ipairs(rows) do
-          if r[4] and (r[2] == "-" or r[2] == "mangler" or r[2] == "ikke satt") then s.focus = i; break end
+          if r[4] and (r[2] == "-" or r[2] == "ikke satt") then s.focus = i; break end
         end
       end
     end
@@ -339,6 +342,7 @@ return function(L, STD, P)
     function s:enter()
       s.prof = loadProfile()
       s.keys = L.keysNew()
+      s.quick = st.done.dir   -- gjort før: Lagre og skriv på hvert ror
       s.chs = byChannel(W.channels(st.cfg, false))
       s.test = L.ctrl(s.prof.test.ctrl)
       s.state = {}
@@ -381,27 +385,31 @@ return function(L, STD, P)
       if s.full then
         L.text(12, 385, "Mikstaket (64) er nådd: noen ror får ikke testmix!", SMLSIZE, L.C.warn)
       else
-        L.text(12, 385, "Trykk på et ror for å velge det.", SMLSIZE, L.C.dim)
+        L.text(12, 385, s.quick and "Trykk på roret du vil endre." or "Trykk på et ror for å velge det.",
+          SMLSIZE, L.C.dim)
       end
-      L.btnRow(list, {
-        { "Avbryt", function() L.pop() end },
-        { "Tilbake", function() if s.i > 1 then s.i = s.i - 1 end end, { enabled = s.i > 1 } },
-        { "Reverser", function() reverse(c) end },
-        { "Ja, " .. neg .. " - OK", function()
-          if s.i < #s.chs then
-            s.i = s.i + 1
-          else
-            st.done.dir = true
-            saveState()
-            L.toast("Servoretning ferdig")
-            L.pop()
-          end
-        end, { color = L.C.green } },
-      })
+      local function done()
+        st.done.dir = true
+        saveState()
+        L.toast("Servoretning ferdig")
+        L.pop()
+      end
+      local items = { { "Avbryt", function() L.pop() end } }
+      if not s.quick then
+        items[#items + 1] = { "Tilbake", function() if s.i > 1 then s.i = s.i - 1 end end, { enabled = s.i > 1 } }
+      end
+      items[#items + 1] = { "Reverser", function() reverse(c) end }
+      if not s.quick or s.i < #s.chs then
+        items[#items + 1] = { "Ja, " .. neg .. " - OK", function()
+          if s.i < #s.chs then s.i = s.i + 1 else done() end
+        end, { color = L.C.green, primary = not s.quick } }
+      end
+      if s.quick then items[#items + 1] = { "Lagre og skriv", done } end
+      L.btnRow(list, items)
       W.planeHits(list, hits, function(role)
         for k, x in ipairs(s.chs) do if x.role == role then s.i = k end end
       end)
-      if not s.focusSet then s.focus = 4; s.focusSet = true end
+      if not s.focusSet then s.focus = #items; s.focusSet = true end
     end
 
     return s
@@ -463,6 +471,21 @@ return function(L, STD, P)
     return { offset = o * 10, ppmCenter = L.round((c - o) * 5.12) }
   end
 
+  -- Knapperaden i steg 2 og 3. Første gang: Avbryt, Tilbake, ekstra, Lagre -> neste.
+  -- Er steget gjort før (quick), byttes Tilbake mot Lagre og skriv, så ett ror kan endres
+  -- uten å bla gjennom resten. Rullehjulet starter på Lagre og skriv (L.run: primary).
+  function W.saveItems(quick, cancel, prev, hasPrev, extra, nextLabel, confirm)
+    local items = { { "Avbryt", cancel } }
+    if not quick then items[#items + 1] = { "Tilbake", prev, { enabled = hasPrev } } end
+    items[#items + 1] = extra
+    if nextLabel then
+      items[#items + 1] = { nextLabel, function() confirm() end, { primary = not quick } }
+    end
+    if quick then items[#items + 1] = { "Lagre og skriv", function() confirm(true) end }
+    elseif not nextLabel then items[#items + 1] = { "Lagre - ferdig", function() confirm() end } end
+    return items
+  end
+
   -- Steg 2: senter. PPM-senter (us fra 1500) på vanlige ror, subtrim (%) på flaps.
   function W.centerScreen()
     local s = { i = 1 }
@@ -493,6 +516,7 @@ return function(L, STD, P)
 
     function s:enter()
       adjustBase(s)
+      s.quick = st.done.center   -- gjort før: Lagre og skriv på hvert ror
       s.chs = W.channels(st.cfg, false)
       setup()
     end
@@ -554,10 +578,11 @@ return function(L, STD, P)
       return false
     end
 
-    local function confirm()
+    -- out: lagre dette roret og gå ut (Lagre og skriv), uten å gå gjennom resten
+    local function confirm(out)
       closeLimits()
       saveState()
-      if s.i < #s.chs then
+      if s.i < #s.chs and not out then
         s.i = s.i + 1
         setup()
       else
@@ -621,18 +646,15 @@ return function(L, STD, P)
       L.dualHint(s.dual, 12, 385)
       L.dualWait(s.dual, 430, 362)
       L.text(12, 362, "PAGE>/< eller 1-6: hopp uten å lagre", SMLSIZE, L.C.dim)
-      L.btnRow(list, {
-        { "Avbryt", cancel },
-        { "Tilbake", function() go(s.i - 1) end, { enabled = s.i > 1 } },
+      local more = s.i < #s.chs
+      L.btnRow(list, W.saveItems(s.quick, cancel, function() go(s.i - 1) end, s.i > 1,
         { "Nullstill pot", function() s.c0 = s.c; L.dualStart(s.dual, true) end },
-        { s.i < #s.chs and ("Lagre -> CH" .. s.chs[s.i + 1].ch) or "Lagre - ferdig", confirm },
-      })
+        more and ("Lagre -> CH" .. s.chs[s.i + 1].ch), confirm))
       W.planeHits(list, hits, function(role)
         for k, x in ipairs(s.chs) do
           if x.role == role and k ~= s.i then go(k) return end
         end
       end)
-      if not s.focusSet then s.focus = 4; s.focusSet = true end
     end
 
     return s
@@ -673,6 +695,7 @@ return function(L, STD, P)
 
     function s:enter()
       adjustBase(s)
+      s.quick = st.done.limits   -- gjort før: Lagre og skriv på hver side
       s.chs = W.channels(st.cfg, false)
       s.entries = {}
       for _, c in ipairs(s.chs) do
@@ -743,11 +766,11 @@ return function(L, STD, P)
       end
     end
 
-    local function confirm()
+    local function confirm(out)
       st.done.lim = st.done.lim or {}
       st.done.lim[s.key] = true
       saveState()
-      if s.k < #s.entries then
+      if s.k < #s.entries and not out then
         s.k = s.k + 1
         setup()
       else
@@ -808,18 +831,14 @@ return function(L, STD, P)
       L.dualHint(s.dual, 12, 385)
       L.dualWait(s.dual, 430, 362)
       L.text(12, 362, "PAGE>/< eller 1-6: hopp uten å lagre", SMLSIZE, L.C.dim)
-      L.btnRow(list, {
-        { "Avbryt", cancel },
-        { "Tilbake", function() go(s.k - 1) end, { enabled = s.k > 1 } },
+      L.btnRow(list, W.saveItems(s.quick, cancel, function() go(s.k - 1) end, s.k > 1,
         { "Nullstill pot", function() s.L0 = s.L; L.dualStart(s.dual, true) end },
-        { s.k < #s.entries and "Lagre -> neste" or "Lagre - ferdig", confirm },
-      })
+        s.k < #s.entries and "Lagre -> neste", confirm))
       W.planeHits(list, hits, function(role)
         for k, x in ipairs(s.entries) do
           if x.ch.role == role and x.side == -1 and k ~= s.k then go(k) return end
         end
       end)
-      if not s.focusSet then s.focus = 4; s.focusSet = true end
     end
 
     return s

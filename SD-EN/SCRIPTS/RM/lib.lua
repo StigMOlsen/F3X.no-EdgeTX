@@ -661,13 +661,14 @@ end
 
 -- Knapp: opts = { enabled, color, left, right (tekst til høyre), primary (oransje),
 --               hidden (usynlig trykkflate, f.eks. et ror på flyfiguren; ikke med i rullehjulet),
---               icon (F3X-symbolet foran teksten, for menyknapper) }
+--               icon (F3X-symbolet foran teksten, for menyknapper),
+--               default (rullehjulet starter her i stedet for på hovedknappen) }
 function L.btn(list, x, y, w, h, text, fn, opts)
   opts = opts or {}
   list[#list + 1] = { x = x, y = y, w = w, h = h, text = text, fn = fn,
     enabled = opts.enabled ~= false and fn ~= nil, color = opts.color,
     left = opts.left, right = opts.right, primary = opts.primary, hidden = opts.hidden, icon = opts.icon,
-    warn = opts.warn }
+    warn = opts.warn, default = opts.default }
 end
 
 -- Knapperad nederst, like brede knapper. Siste knapp er hovedknappen (oransje),
@@ -758,6 +759,17 @@ function L.run(event, touch)
 
   lcd.clear(L.C.bg)
   local list = L.buttons(s)
+  -- Rullehjulet starter på Lagre/Neste (hovedknappen) eller knappen merket default, aldri på
+  -- en knapp som endrer oppsettet. Skjermen setter s.focusSet = nil når innholdet byttes.
+  if not s.focusSet and #list > 0 then
+    s.focusSet = true
+    local d
+    for i, b in ipairs(list) do
+      if b.enabled and b.default then d = i end
+      if not d and b.enabled and b.primary then d = i end
+    end
+    if d then s.focus = d end
+  end
   if #list > 0 then
     if s.focus > #list or not list[s.focus].enabled or list[s.focus].hidden then
       s.focus = nextEnabled(list, s.focus, 1)

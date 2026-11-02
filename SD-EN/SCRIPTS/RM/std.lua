@@ -132,7 +132,7 @@ return {
     packMin = 6.0, cellDetect = 4.35, cellLow = 3.7, cellWarn = 3.5,
     -- Graf over batteri og link på flyskjermen: ett punkt hvert graphSec sekund, høyst graphMax
     -- punkter (blir det flere, tas annethvert bort og intervallet dobles)
-    graphSec = 2, graphMax = 400,
+    graphSec = 2, graphMax = 400, graphSpan = 1800,   -- tidsaksen i grafen: 30 min
     -- Verdier per flymodus [FM] = %. FM0 Normal, FM1 Landing, FM2 Launch, FM3 Speed, FM4 Thermal.
     -- Standard 0 (bestemt 2026-10-26): pilotene slår dem på selv i meny 6
     ailRud = { [0] = 0, [1] = 0, [2] = 0, [3] = 0, [4] = 0 },
