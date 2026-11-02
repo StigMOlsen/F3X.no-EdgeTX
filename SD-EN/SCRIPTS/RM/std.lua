@@ -23,7 +23,7 @@ return {
   chMax = 16,   -- høyeste kanal som kan velges (CH17-21 er virtuelle kanaler)
   names = { ailL = "Ail L", flapL = "Flap L", flapR = "Flap R", ailR = "Ail R",
             elev = "Elev", rud = "Rud", vL = "V-L", vR = "V-R",
-            motor = "Motor", aux = "Ekstra", tipL = "Tip L", tipR = "Tip R" },
+            motor = "Motor", aux = "Extra", tipL = "Tip L", tipR = "Tip R" },
 
   -- Rekkefølge i senter og endepunkter (steg 2 og 3)
   order = { "flapL", "flapR", "ailL", "ailR", "tipL", "tipR", "elev", "rud", "vL", "vR" },
