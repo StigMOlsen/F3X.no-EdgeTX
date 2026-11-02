@@ -2,7 +2,9 @@
 
 🇬🇧 **English version:** [README.en.md](README.en.md) – engelsk SD-pakke i *Releases*.
 
-Lua-verktøy for **RadioMaster TX16S MK3** (800×480) og **TX16S MK2** (480×272) med EdgeTX.
+Lua-verktøy for **RadioMaster-radioer med fargeskjerm** og EdgeTX 2.12, for eksempel TX16S MK3 (800×480)
+og TX16S MK2 (480×272). Skjermbildene tilpasser seg skjermstørrelsen. Radioer med svart-hvitt-skjerm
+(Boxer, Zorro, Pocket, MT12, GX12, TX12 o.l.) støttes ikke.
 Setter opp et seilfly steg for steg: pilotens brytere og kanaler, servoretning, senter,
 endepunkter, utslag, flymoduser (Normal, Landing, Speed, Termikk, motor), butterfly/crow,
 camber, kikkflapp, aileron→sideror og aileron→flaps, med norske stemmeutrop.
@@ -61,7 +63,7 @@ radio og EdgeTX-versjon du har, hvilket steg det gjelder, og legg gjerne ved et 
 ## Status
 
 Brukt på TX16S MK3 med EdgeTX 2.12.5 og ER8-mottaker. MK2-versjonen er samme kode, skalert ned,
-og er lite prøvd på ekte radio. Tilbakemeldinger er velkomne (se over).
+og er lite prøvd på ekte radio. Andre radioer med fargeskjerm er ikke prøvd. Tilbakemeldinger er velkomne (se over).
 
 ## Lisens
 
