@@ -25,8 +25,9 @@ local function menu()
   local s = {}
   function s:draw(list)
     L.header("F3X.no", "RadioMaster-verktøy")
+    local step = math.min(84, math.floor(350 / #APPS))   -- plass over knapperaden nederst
     for i, a in ipairs(APPS) do
-      L.btn(list, 20, 66 + (i - 1) * 84, 760, 72, a[1], function() start(a[3]) end,
+      L.btn(list, 20, 62 + (i - 1) * step, 760, step - 10, a[1], function() start(a[3]) end,
         { left = true, icon = true, right = a[2] })
     end
     L.btnRow(list, { { "Avslutt", function() L.pop() end } })

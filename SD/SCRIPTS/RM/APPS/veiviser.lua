@@ -15,6 +15,7 @@ local function init()
     load("/SCRIPTS/RM/pilot.lua"), load("/SCRIPTS/RM/wizard.lua")
   local setupC, adjC = load("/SCRIPTS/RM/setup.lua"), load("/SCRIPTS/RM/adjust.lua")
   local gfxC = load("/SCRIPTS/RM/gfx.lua")
+  local trC = loadScript("/SCRIPTS/RM/trainer.lua")   -- valgfri: uten Trener-appen på SD-kortet
   if err then return end
   L = libC()
   local STD = stdC()
@@ -23,6 +24,7 @@ local function init()
   W.G = gfxC()(L)
   W.S = setupC()(L, STD, W)
   W.A = adjC()(L, STD, W, W.S)
+  if trC then W.T = trC()(L, STD, W, W.S) end
   L.initControls()
   local n = L.tmpClearAll()
   L.push(W.startScreen())

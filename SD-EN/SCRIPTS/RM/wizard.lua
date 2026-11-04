@@ -35,6 +35,7 @@ return function(L, STD, P)
 
   -- Brukes av setup.lua og adjust.lua (W.S og W.A settes av verktøyet)
   function W.state() return st end
+  function W.load() loadState() end
   function W.saveState() saveState() end
   function W.profile() return loadProfile() end
 
@@ -266,16 +267,16 @@ return function(L, STD, P)
 
   local CFG_OPTS = {
     { key = "wing", label = "Wing servos", values = { 2, 4 }, text = function(v)
-      return v == 2 and "2 (ailerons)" or "4 (ail + flaps)" end },
+      return v == 2 and "2 (ail)" or "4 (ail + flap)" end },
     { key = "tail", label = "Tail", values = { "X", "V" }, text = function(v)
-      return v == "V" and "V-tail" or "Cross / conventional" end },
+      return v == "V" and "V-tail" or "Cross" end },
     { key = "motor", label = "Motor", values = { true, false }, text = yesno },
     { key = "thermal", label = "Thermal (FM4)", values = { true, false }, text = yesno },
     { key = "speed", label = "Speed (FM3)", values = { true, false }, text = yesno },
     { key = "launch", label = "Launch (FM2)", values = { true, false }, text = yesno },
     { key = "landing", label = "Landing (FM1)", values = { true, false }, text = yesno },
-    { key = "camberMode", label = "Camber control", values = { "split", "full" }, text = function(v)
-      return v == "full" and "Full range in all FM" or "Thermal / Speed per FM" end },
+    { key = "camberMode", label = "Camber", values = { "split", "full" }, text = function(v)
+      return v == "full" and "Full range" or "Per FM" end },
   }
 
   function W.configScreen()
@@ -310,7 +311,8 @@ return function(L, STD, P)
     function s:draw(list)
       L.header("0 - Model config")
       for i, o in ipairs(CFG_OPTS) do
-        L.btn(list, 20, 56 + (i - 1) * 43, 470, 38, o.label, function() cycle(o) end,
+        -- 40 px per rad: luft mellom nederste rad og knapperaden, så de er lette å treffe
+        L.btn(list, 20, 56 + (i - 1) * 40, 470, 36, o.label, function() cycle(o) end,
           { left = true, right = o.text(s.cfg[o.key]) })
       end
       W.plane(s.cfg, { x = 505, y = 70, w = 285 })
@@ -323,6 +325,32 @@ return function(L, STD, P)
 
     return s
   end
+
+  -- Testmiksene i steg 1-3 trenger én plass per ror under mikstaket (64). En modell nær taket
+  -- (V-hale med expo) ga ror uten testmiks som ikke fulgte testbryteren. Testmiksen (REPLACE,
+  -- sist) overstyrer alt på kanalen, så veiviserens egne mikser der tas ut mens steget pågår
+  -- og skrives på nytt når steget avsluttes (og ved neste start hvis radioen slås av midt i).
+  -- Brukes også av meny 6 (adjust.lua): s.chs er kanalene som får testmiks.
+  local function makeRoom(s, extra)
+    local need = #s.chs + (extra or 0) - (STD.maxMixes - L.mixTotal())
+    if need <= 0 or not st.done.mix then return end
+    st.planVer = nil
+    saveState()
+    s.freed = true
+    for k = #s.chs, 1, -1 do
+      local idx = s.chs[k].ch - 1
+      for i = model.getMixesCount(idx) - 1, 0, -1 do
+        local m = model.getMix(idx, i)
+        if m and m.name ~= L.TMP and m.name ~= L.SH then model.deleteMix(idx, i); need = need - 1 end
+      end
+      if need <= 0 then return end
+    end
+  end
+
+  local function restoreRoom(s)
+    if s.freed then s.freed = nil; W.autoWrite() end
+  end
+  W.makeRoom, W.restoreRoom = makeRoom, restoreRoom
 
   ----------------------------------------------------------------------
   -- Steg 1: servoretning. Testbryteren inne = alle ror til negativ (ned / sideror høyre).
@@ -348,8 +376,9 @@ return function(L, STD, P)
       s.state = {}
       local half = L.round(V.dirTest / 2)
       s.full = false
+      for _, c in ipairs(s.chs) do L.tmpClear(c.ch) end
+      makeRoom(s)
       for _, c in ipairs(s.chs) do
-        L.tmpClear(c.ch)
         -- Testbryter i ro (-100) gir 0, inne (+100) gir -dirTest
         if not L.tmpAdd(c.ch, s.test.id, -half, -half) then s.full = true end
       end
@@ -357,6 +386,7 @@ return function(L, STD, P)
 
     function s:leave()
       for _, c in ipairs(s.chs or {}) do L.tmpClear(c.ch) end
+      restoreRoom(s)
     end
 
     local function reverse(c)
@@ -474,9 +504,10 @@ return function(L, STD, P)
   -- Knapperaden i steg 2 og 3. Første gang: Avbryt, Tilbake, ekstra, Lagre -> neste.
   -- Er steget gjort før (quick), byttes Tilbake mot Lagre og skriv, så ett ror kan endres
   -- uten å bla gjennom resten. Rullehjulet starter på Lagre og skriv (L.run: primary).
-  function W.saveItems(quick, cancel, prev, hasPrev, extra, nextLabel, confirm)
+  -- alwaysPrev: Tilbake også når steget er gjort før (steg 3)
+  function W.saveItems(quick, cancel, prev, hasPrev, extra, nextLabel, confirm, alwaysPrev)
     local items = { { "Cancel", cancel } }
-    if not quick then items[#items + 1] = { "Back", prev, { enabled = hasPrev } } end
+    if not quick or alwaysPrev then items[#items + 1] = { "Back", prev, { enabled = hasPrev } } end
     items[#items + 1] = extra
     if nextLabel then
       items[#items + 1] = { nextLabel, function() confirm() end, { primary = not quick } }
@@ -518,12 +549,15 @@ return function(L, STD, P)
       adjustBase(s)
       s.quick = st.done.center   -- gjort før: Lagre og skriv på hvert ror
       s.chs = W.channels(st.cfg, false)
+      for _, x in ipairs(s.chs) do L.tmpClear(x.ch) end
+      makeRoom(s)
       setup()
     end
 
     function s:leave()
       closeLimits()
       for _, x in ipairs(s.chs or {}) do L.tmpClear(x.ch) end
+      restoreRoom(s)
     end
 
     function s:tick()
@@ -697,6 +731,20 @@ return function(L, STD, P)
       adjustBase(s)
       s.quick = st.done.limits   -- gjort før: Lagre og skriv på hver side
       s.chs = W.channels(st.cfg, false)
+      for _, x in ipairs(s.chs) do L.tmpClear(x.ch); L.shClear(x.ch) end
+      -- Testbryteren inne: alle ror i nøytral (RMsh sist på kanalen vinner over testmiksen),
+      -- så du kan se utslaget mot nøytral underveis. Trenger én plass til per ror.
+      local test = s.prof.test and L.ctrl(s.prof.test.ctrl)
+      local sw = test and L.switchIndex(test.key, 1)
+      local MAXS = maxSource()
+      makeRoom(s, sw and #s.chs or 0)
+      s.shChs = {}
+      if sw and MAXS then
+        for _, x in ipairs(s.chs) do
+          if L.shAdd(x.ch, MAXS, sw) then s.shChs[#s.shChs + 1] = x.ch end
+        end
+      end
+      s.shLabel = #s.shChs == #s.chs and test.label or nil
       s.entries = {}
       for _, c in ipairs(s.chs) do
         s.entries[#s.entries + 1] = { ch = c, side = -1 }
@@ -707,6 +755,9 @@ return function(L, STD, P)
 
     function s:leave()
       for _, x in ipairs(s.chs or {}) do L.tmpClear(x.ch) end
+      for _, ch in ipairs(s.shChs or {}) do L.shClear(ch) end
+      s.shChs = {}
+      restoreRoom(s)
     end
 
     local function limits(e)
@@ -796,6 +847,7 @@ return function(L, STD, P)
       local sideName = e.side < 0 and neg or pos
       L.header("3 - Endpoints", "CH" .. e.ch.ch .. " " .. sideName .. " - " .. s.k .. " of " .. #s.entries)
       local hits = W.plane(st.cfg, { active = e.ch.role,
+        caption = s.shLabel and ("Hold " .. s.shLabel .. " in: all surfaces neutral"),
         color = W.roleColors(s.chs, function(k) return 2 * k < s.k end, e.ch.role) })
       title(e.ch.name, sideName)
       L.text(430, 106, "CH" .. e.ch.ch .. " - " .. s.field .. "-limit" ..
@@ -833,7 +885,7 @@ return function(L, STD, P)
       L.text(12, 362, "PAGE>/< or 1-6: skip without saving", SMLSIZE, L.C.dim)
       L.btnRow(list, W.saveItems(s.quick, cancel, function() go(s.k - 1) end, s.k > 1,
         { "Reset pot", function() s.L0 = s.L; L.dualStart(s.dual, true) end },
-        s.k < #s.entries and "Save -> next", confirm))
+        s.k < #s.entries and "Save -> next", confirm, true))
       W.planeHits(list, hits, function(role)
         for k, x in ipairs(s.entries) do
           if x.ch.role == role and x.side == -1 and k ~= s.k then go(k) return end

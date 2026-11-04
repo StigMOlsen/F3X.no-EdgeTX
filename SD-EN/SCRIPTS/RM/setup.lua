@@ -569,6 +569,29 @@ return function(L, STD, W)
     end
     if ON then sf({ switch = ON, func = FUNC_LOGS, value = V.logInterval, label = "Logging to SD" }) end
 
+    -- Trener (trainer.lua): elev har stikkene mens lærerbryteren er på og elevsignalet er der
+    local tr = st.trainer
+    if tr and tr.on then
+      local T = W.T
+      if not T then
+        local c = loadScript("/SCRIPTS/RM/trainer.lua")
+        T = c and c()(L, STD, W, S)
+        W.T = T
+      end
+      local tsw = tr.ctrl and L.switchIndex(tr.ctrl, tr.pos)
+      local trn = L.swIndex("Trn")
+      local lsw = sw(LS.trainer)
+      if not T or not tsw then
+        note("Teacher switch not found: trainer left out.")
+      else
+        if trn and lsw then
+          p.ls[LS.trainer] = { func = LS_FUNC_AND, v1 = tsw, v2 = trn, label = "Trener: elev flyr" }
+          tsw = lsw
+        end
+        T.planSfs(tr, tsw, sf, note)
+      end
+    end
+
     -- Alarmer (lagt inn fra sjekklisten når telemetrien er oppdaget)
     if st.alarms then
       local lq = L.findSource({ "RQly" })

@@ -677,7 +677,7 @@ function L.btnRow(list, items)
   local n = #items
   local gap = 8
   local w = math.floor((L.W - 20 - gap * (n - 1)) / n)
-  lcd.drawFilledRectangle(0, 410, L.W, 70, L.C.panel)
+  lcd.drawFilledRectangle(0, L.BAR_Y, L.W, 70, L.C.panel)
   for i, it in ipairs(items) do
     local o = it[3] or {}
     if i == n and n > 1 and o.primary == nil then
@@ -687,6 +687,7 @@ function L.btnRow(list, items)
       o = c
     end
     L.btn(list, 10 + (i - 1) * (w + gap), 418, w, 54, it[1], it[2], o)
+    list[#list].bar = true
   end
 end
 
@@ -733,8 +734,25 @@ end
 -- Trykk: knappen som er truffet, ellers den nærmeste innenfor L.TOUCH_PAD (800 x 480-
 -- koordinater), så et trykk litt ved siden av en knapp også virker. Ved lik avstand vinner
 -- den første i listen. Et trykk rett på en deaktivert (grå) knapp gjør ingenting.
+-- Hele det mørke feltet nederst (fra L.BAR_Y) hører til knapperaden: et trykk der treffer
+-- knappen rett under eller nærmest sideveis, aldri en rad over feltet.
 L.TOUCH_PAD = 30
+L.BAR_Y = 410
 function L.touchHit(list, x, y)
+  if y >= L.BAR_Y then
+    local best, bestD
+    for i, b in ipairs(list) do
+      if b.bar then
+        local dx = math.max(b.x - x, 0, x - (b.x + b.w))
+        if b.enabled then
+          if dx <= L.TOUCH_PAD and (not bestD or dx < bestD) then best, bestD = i, dx end
+        elseif dx == 0 and not b.hidden then
+          return nil
+        end
+      end
+    end
+    if best then return best end
+  end
   local best, bestD
   for i, b in ipairs(list) do
     local dx = math.max(b.x - x, 0, x - (b.x + b.w))
@@ -798,7 +816,12 @@ function L.run(event, touch)
     elseif event == EVT_VIRTUAL_ENTER then
       local b = list[s.focus]
       if b and b.enabled then b.fn() end
-    elseif event == EVT_TOUCH_TAP and touch then
+    elseif touch and (event == EVT_TOUCH_FIRST or (event == EVT_TOUCH_TAP and not app.sawFirst)) then
+      -- Trykket utføres når fingeren treffer skjermen (FIRST): det kommer bare én FIRST per
+      -- trykk, så knappen reagerer med en gang og aldri to ganger. TAP og BREAK kommer når
+      -- fingeren slippes (på radioen kan begge komme for samme trykk) og overses derfor når
+      -- radioen sender FIRST. Uten FIRST (eldre EdgeTX, testene) brukes TAP som før.
+      if event == EVT_TOUCH_FIRST then app.sawFirst = true end
       local i = L.touchHit(list, touch.x, touch.y)
       if i then
         if not list[i].hidden then s.focus = i end

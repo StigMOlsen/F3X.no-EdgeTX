@@ -108,31 +108,33 @@ return function(L, STD)
 
   ----------------------------------------------------------------------
   -- Historikk for grafene: flytid (t), batteri (v, -1 = ingen verdi), RQly (q, 0 = ingen link),
-  -- motor (m, 1 = går) og sendereffekt (p, mW fra ELRS-sensoren TPWR, 0 = ingen verdi). Ligger i F, så den beholdes når flyskjermen lukkes og åpnes igjen
+  -- motor (m, 1 = går), sendereffekt (p, mW fra ELRS-sensoren TPWR, 0 = ingen verdi) og signalstyrken
+  -- på mottakerens antenne 1 og 2 (a1/a2, dBm fra 1RSS/2RSS, 0 = ingen verdi). Ligger i F, så den beholdes når flyskjermen lukkes og åpnes igjen
   -- mens verktøyet kjører. Nullstilles ved ny flyging.
 
-  local function newHist() return { t = {}, v = {}, q = {}, m = {}, p = {}, step = V.graphSec } end
+  local function newHist() return { t = {}, v = {}, q = {}, m = {}, p = {}, a1 = {}, a2 = {}, step = V.graphSec } end
   F.hist = newHist()
 
-  function F.sample(h, t, v, q, m, p)
+  function F.sample(h, t, v, q, m, p, a1, a2)
     local n = #h.t
     if n > 0 and t < h.t[n] then   -- timerne nullstilt mens skjermen var lukket: ny flyging
-      h.t, h.v, h.q, h.m, h.p, h.step = {}, {}, {}, {}, {}, V.graphSec
+      h.t, h.v, h.q, h.m, h.p, h.a1, h.a2, h.step = {}, {}, {}, {}, {}, {}, {}, V.graphSec
       n = 0
     end
+    h.a1, h.a2 = h.a1 or {}, h.a2 or {}
     n = n + 1
-    h.t[n], h.v[n], h.q[n], h.m[n], h.p[n] = t, v, q, m, p or 0
+    h.t[n], h.v[n], h.q[n], h.m[n], h.p[n], h.a1[n], h.a2[n] = t, v, q, m, p or 0, a1 or 0, a2 or 0
     if n > V.graphMax then   -- annethvert punkt bort, dobbelt intervall
-      local k = { t = {}, v = {}, q = {}, m = {}, p = {} }
+      local k = { t = {}, v = {}, q = {}, m = {}, p = {}, a1 = {}, a2 = {} }
       for i = 1, n, 2 do
         local j = #k.t + 1
-        k.t[j], k.v[j], k.q[j], k.m[j], k.p[j] = h.t[i], h.v[i], h.q[i], h.m[i], h.p[i]
+        k.t[j], k.v[j], k.q[j], k.m[j], k.p[j], k.a1[j], k.a2[j] = h.t[i], h.v[i], h.q[i], h.m[i], h.p[i], h.a1[i], h.a2[i]
       end
-      h.t, h.v, h.q, h.m, h.p, h.step = k.t, k.v, k.q, k.m, k.p, h.step * 2
+      h.t, h.v, h.q, h.m, h.p, h.a1, h.a2, h.step = k.t, k.v, k.q, k.m, k.p, k.a1, k.a2, h.step * 2
     end
   end
 
-  -- Graf over batteri ("v") eller link ("q") for flygingen så langt
+  -- Graf over batteri ("v"), link ("q") eller de to mottakerantennene ("a") for flygingen så langt
   function F.graphScreen(kind, info)
     local s = {}
     local X0, X1, Y0, Y1 = 80, 770, 72, 352
@@ -154,7 +156,99 @@ return function(L, STD)
       lcd.drawLine(floor(x1 + 0.5), floor(y1 + 0.5), floor(x2 + 0.5), floor(y2 + 0.5), pat or SOLID or 0, color)
     end
 
+    -- Bunnlinjen: de to andre grafene og Tilbake
+    local KINDS = { { "v", "Show battery" }, { "q", "Show link" }, { "a", "Show antennas" } }
+    local function bottom(list)
+      local items = {}
+      for _, k in ipairs(KINDS) do
+        if k[1] ~= kind then
+          items[#items + 1] = { k[2], function() L.pop(); L.push(F.graphScreen(k[1], info)) end, { primary = false } }
+        end
+      end
+      items[#items + 1] = { "Back", function() L.pop() end }
+      L.btnRow(list, items)
+    end
+
+    -- Antenne 1 (blå) og 2 (grønn) i dBm, fast skala -110 til -30. 0 = ingen verdi (brudd i kurven).
+    local function drawAnt(list)
+      local h = F.hist
+      local n = #h.t
+      local a1, a2 = h.a1 or {}, h.a2 or {}
+      L.header("Graph: antenna 1 and 2 (dBm)", n > 0 and F.clock(h.t[n]) or nil)
+      local lo, hi = -110, -30
+      local t1 = math.max(V.graphSpan, n > 0 and h.t[n] or 0)
+      local t0 = t1 - V.graphSpan
+      local first = 1
+      while first < n and h.t[first] < t0 do first = first + 1 end
+      local function X(t) return X0 + (X1 - X0) * (t - t0) / (t1 - t0) end
+      local function Y(v) return Y1 - (Y1 - Y0) * (L.clamp(v, lo, hi) - lo) / (hi - lo) end
+      lcd.drawFilledRectangle(X0, Y0, X1 - X0, Y1 - Y0, L.C.panel)
+      for v = lo, hi, 20 do
+        local y = floor(Y(v) + 0.5)
+        line(X0, y, X1, y, L.C.off)
+        L.text(X0 - 8, y - 8, tostring(v), SMLSIZE + RIGHT, L.C.dim)
+      end
+      for t = t0 - t0 % 300 + 300, t1 - 1, 300 do
+        local x = floor(X(t) + 0.5)
+        line(x, Y0, x, Y1, L.C.off, DOTTED)
+      end
+      lcd.drawRectangle(X0, Y0, X1 - X0, Y1 - Y0, L.C.edge)
+      L.text(X0 - 8, Y0 - 22, "dBm", SMLSIZE + RIGHT, L.C.dim)
+      for i = first, n - 1 do
+        if h.m[i] == 1 then
+          lcd.drawFilledRectangle(floor(X(h.t[i])), Y1 + 3, max(1, floor(X(h.t[i + 1]) - X(h.t[i]) + 0.5)), 6, L.C.act)
+        end
+      end
+      L.text(X0, Y1 + 12, F.clock(t0), SMLSIZE, L.C.dim)
+      L.text(floor((X0 + X1) / 2), Y1 + 12, F.clock(floor((t0 + t1) / 2)), SMLSIZE + CENTER, L.C.dim)
+      L.text(X1, Y1 + 12, F.clock(t1), SMLSIZE + RIGHT, L.C.dim)
+      L.text(X0 + 60, Y1 + 12, "motor on", SMLSIZE, L.C.act)
+      L.text(X1 - 110, Y0 - 22, "antenna 1", SMLSIZE + RIGHT, L.C.pwr)
+      L.text(X1, Y0 - 22, "antenna 2", SMLSIZE + RIGHT, L.C.ok)
+      -- Snitt og svakeste verdi per antenne; forskjellen bare der begge har verdi
+      local st = { { s = 0, n = 0 }, { s = 0, n = 0 } }
+      local dS, dN = 0, 0
+      for k, arr in ipairs({ a1, a2 }) do
+        local c, o = k == 1 and L.C.pwr or L.C.ok, st[k]
+        for i = 1, n do
+          local v = arr[i] or 0
+          if v < 0 then
+            o.s, o.n = o.s + v, o.n + 1
+            if not o.min or v < o.min then o.min = v end
+            if i > first and (arr[i - 1] or 0) < 0 then
+              local xa, xb, ya, yb = X(h.t[i - 1]), X(h.t[i]), Y(arr[i - 1]), Y(v)
+              line(xa, ya, xb, yb, c)
+              line(xa, ya + 1, xb, yb + 1, c)
+            end
+          end
+        end
+      end
+      for i = 1, n do
+        if (a1[i] or 0) < 0 and (a2[i] or 0) < 0 then dS, dN = dS + a1[i] - a2[i], dN + 1 end
+      end
+      local sum
+      if n < 2 then
+        sum = "No data yet. The graph fills while the flight screen is open."
+      elseif st[1].n == 0 and st[2].n == 0 then
+        sum = "No antenna value (1RSS/2RSS) in this flight."
+      else
+        local function one(k)
+          local o = st[k]
+          if o.n == 0 then return "Ant " .. k .. " -" end
+          return string.format("Ant %d avg %d, weakest %d", k, floor(o.s / o.n + 0.5), o.min)
+        end
+        sum = one(1) .. "  ·  " .. one(2)
+        if dN > 0 then
+          local d = floor(dS / dN + 0.5)
+          if d ~= 0 then sum = sum .. string.format("  ·  ant %d is %d dB weaker", d > 0 and 2 or 1, math.abs(d)) end
+        end
+      end
+      L.text(400, 392, sum, SMLSIZE + CENTER, L.C.text)
+      bottom(list)
+    end
+
     function s:draw(list)
+      if kind == "a" then return drawAnt(list) end
       local h = F.hist
       local n = #h.t
       L.header(kind == "q" and "Graph: link (RQly)" or ("Graph: " .. (info.cells and "motor battery" or "battery")),
@@ -272,12 +366,7 @@ return function(L, STD)
       end
       L.text(400, 392, sum, SMLSIZE + CENTER, L.C.text)
 
-      L.btnRow(list, {
-        { kind == "q" and "Show battery" or "Show link", function()
-            L.pop(); L.push(F.graphScreen(kind == "q" and "v" or "q", info))
-          end, { primary = false } },
-        { "Back", function() L.pop() end },
-      })
+      bottom(list)
     end
 
     return s
@@ -288,7 +377,7 @@ return function(L, STD)
     local s = {}
     local cfg = loadCfg()
     local st = {}
-    local src = { lq = field("RQly"), rssi = field("1RSS"), alt = field("Alt"), pwr = field("TPWR") }
+    local src = { lq = field("RQly"), rssi = field("1RSS"), rssi2 = field("2RSS"), alt = field("Alt"), pwr = field("TPWR") }
     -- Batteri: flybatteriet hvis en sensor gir det (VFAS/Bat), ellers RxBt. ER8 gir motorbatteriet
     -- som RxBt når spenningsledningen er koblet til batteriet (4-35 V, velger inngang selv).
     for _, n in ipairs(BAT_NAMES) do
@@ -452,7 +541,8 @@ return function(L, STD)
         if not st.sampleAt or now - st.sampleAt >= F.hist.step * 100 then
           st.sampleAt = now
           F.sample(F.hist, fe, (linked and st.rx and st.rx > 0) and st.rx or -1,
-            (linked and lq) or 0, run and 1 or 0, (linked and read(src.pwr)) or 0)
+            (linked and lq) or 0, run and 1 or 0, (linked and read(src.pwr)) or 0,
+            (linked and read(src.rssi)) or 0, (linked and read(src.rssi2)) or 0)
         end
       end
       st.linkWas = linked

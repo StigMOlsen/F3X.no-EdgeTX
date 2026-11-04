@@ -169,6 +169,7 @@ return {
              ailFlapL = 12, ailFlapR = 13 },   -- Ail->Flap: opp og ned i % av utslaget, per flap
   ls = { landing = 0, motorOn = 1, landMotor = 2, lock = 3, motorRun = 4, lq = 5, rxbt = 6,
          mot1 = 7, mot2 = 8, mot3 = 9,              -- motor-FM: motor tillatt OG motortrinn
-         launchG = 10, speedG = 11, thermalG = 12 }, -- FM-bryter OG motoren står (glidefly-FM)
+         launchG = 10, speedG = 11, thermalG = 12,  -- FM-bryter OG motoren står (glidefly-FM)
+         trainer = 13 },                             -- trener: lærerbryter OG elevsignal (Trn)
   maxMixes = 64,
 }

@@ -74,8 +74,15 @@ return function(L, STD, W, S)
       local MAXS = L.findSource({ "max", "MAX" })
       s.shChs = {}
       local chs = W.channels(s.st.cfg, false)
+      -- Rorene som viser verdien med testmiks (def.room) må ha plass under mikstaket, ellers
+      -- står de stille når S1/S2 dreies. Veiviserens mikser der tas ut mens skjermen er åpen.
+      if def.room then
+        s.room = { chs = def.room(s.st) }
+        W.makeRoom(s.room, (sw and MAXS) and #chs or 0)
+      end
       -- Plass: én per ror, pluss testmiksene skjermen selv trenger (def.tmpNeed, ellers 1)
-      if sw and MAXS and L.mixTotal() + #chs + (def.tmpNeed or 1) <= STD.maxMixes then
+      local tmpNeed = s.room and #s.room.chs or def.tmpNeed or 1
+      if sw and MAXS and L.mixTotal() + #chs + tmpNeed <= STD.maxMixes then
         for _, c in ipairs(chs) do
           if L.shAdd(c.ch, MAXS, sw) then s.shChs[#s.shChs + 1] = c.ch end
         end
@@ -88,6 +95,7 @@ return function(L, STD, W, S)
       if def.leave then def.leave() end
       for _, ch in ipairs(s.shChs or {}) do L.shClear(ch) end
       s.shChs = {}
+      if s.room then W.restoreRoom(s.room); s.room = nil end
     end
 
     function s:tick()
@@ -316,6 +324,7 @@ return function(L, STD, W, S)
   -- stilles. Min kan være 0 (nøytral).
   local function camberScreen()
     local def = { title = "Termikk / Speed per ror", tmpNeed = 6 }   -- alle vingerorene vises
+    function def.room(st) return wingRoles(st.cfg) end
     local MAXS = L.findSource({ "max", "MAX" })
     local shown = {}
     -- Alle vingerorene viser verdien for det som stilles (f.eks. Termikk maks), så de ferdige
