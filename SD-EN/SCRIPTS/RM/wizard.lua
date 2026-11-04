@@ -65,11 +65,6 @@ return function(L, STD, P)
 
   local function yesno(v) return v and "Yes" or "No" end
 
-  function W.cfgText(cfg)
-    return cfg.wing .. " servos, " .. (cfg.tail == "V" and "V-tail" or "cross") ..
-      (cfg.motor and ", motor" or "")
-  end
-
   local MAXSRC
   local function maxSource()
     if not MAXSRC then MAXSRC = L.findSource({ "max", "MAX" }) end
@@ -216,7 +211,7 @@ return function(L, STD, P)
       -- Steg som endrer oppsettet: skriv automatisk når du kommer tilbake hit
       local function pushW(f) return function() s.autoWrite = true; L.push(f()) end end
       local rows = {
-        { "0   Model config", cfg and W.cfgText(cfg) or "not set", pushW(W.configScreen), s.prof ~= nil },
+        { "0   Model config", cfg and "" or "not set", pushW(W.configScreen), s.prof ~= nil },
         { "1   Servo direction", d.dir and "done" or "-", pushW(W.dirScreen), ready },
         { "2   Center (PPM center)", d.center and "done" or "-", pushW(W.centerScreen), ready and d.dir },
         { "3   Endpoints", d.limits and "done" or "-", pushW(W.limitScreen), ready and d.center },
