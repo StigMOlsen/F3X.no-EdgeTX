@@ -3,7 +3,7 @@
 🇬🇧 **English version:** [README.en.md](README.en.md) – engelsk SD-pakke i *Releases*.
 
 Lua-verktøy for **RadioMaster-radioer med fargeskjerm** og EdgeTX 2.12, for eksempel TX16S MK3 (800×480)
-og TX16S MK2 (480×272). Skjermbildene tilpasser seg skjermstørrelsen. Radioer med svart-hvitt-skjerm
+TX16S MK2 (480×272) og GX15 (480×320, ikke prøvd på radio ennå). Skjermbildene tilpasser seg skjermstørrelsen. Radioer med svart-hvitt-skjerm
 (Boxer, Zorro, Pocket, MT12, GX12, TX12 o.l.) støttes ikke.
 Setter opp et seilfly steg for steg: pilotens brytere og kanaler, servoretning, senter,
 endepunkter, utslag, flymoduser (Normal, Landing, Speed, Termikk, motor), butterfly/crow,

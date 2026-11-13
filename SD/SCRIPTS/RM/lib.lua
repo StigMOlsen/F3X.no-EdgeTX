@@ -291,12 +291,15 @@ function L.dualStart(a, force, soft)
 end
 
 -- Samlet endring i justeringens enhet: span er endringen over halv vandring.
--- nil mens begge holdes fast.
+-- nil mens begge holdes fast. Med grovkontroll gir S2 dobbelt fineSpan (Stig 2026-11-09:
+-- «litt for fin på alle bruksområder», økt 100 %).
+L.FINE_GAIN = 2
 function L.dualDelta(a, fineSpan, coarseSpan)
   local f = L.potDelta(a.fine)
   local c = a.coarse and L.potDelta(a.coarse)
   if not f and not c then return nil end
-  return (f or 0) * fineSpan / 1024 + (c or 0) * coarseSpan / 1024
+  local fg = a.coarse and L.FINE_GAIN or 1
+  return (f or 0) * fineSpan * fg / 1024 + (c or 0) * coarseSpan / 1024
 end
 
 -- Ved grensen: regn videre fra der kontrollene står nå, så verdien følger med tilbake
@@ -639,6 +642,34 @@ function L.text(x, y, t, font, color)
   lcd.drawText(x, y, t, (font or 0) + (color or L.C.text))
 end
 
+-- Flysperre: den logiske bryteren (0-basert indeks i) er en sticky som settes når motor-
+-- bryteren er på. Finnes den ikke (modellen er ikke skrevet med planVersion 8, eller uten
+-- motor), er ingenting sperret.
+function L.flyLocked(i)
+  if not i then return false end
+  local l = model.getLogicalSwitch(i)
+  if not (l and LS_FUNC_STICKY and l.func == LS_FUNC_STICKY) then return false end
+  local sw = L.lsSwitch(i)
+  return sw ~= nil and getSwitchValue(sw) == true
+end
+L.LOCK_TEXT = "Sperret etter motor: motorbryter av og stikkene i ro i 15 s."
+
+-- SH-merket oppe til venstre (over flyfiguren), likt i alle skjermer der testbryteren
+-- gjør noe: label = bryteren (SH), what = hva den gjør. blocked: bryteren finnes, men
+-- mikstaket (64) gir ikke plass, så den virker ikke i denne skjermen.
+function L.shNote(label, what, blocked)
+  local w = L.textSize(label, SMLSIZE) + 14
+  lcd.drawFilledRectangle(12, 60, w, 22, blocked and L.C.edge or L.C.act)
+  lcd.drawText(19, 62, label, SMLSIZE + L.C.bg)
+  if blocked then
+    L.text(w + 18, 62, "virker ikke her", SMLSIZE, L.C.warn)
+    L.text(12, 86, "(mikstaket 64 er nådd)", SMLSIZE, L.C.dim)
+  else
+    L.text(w + 18, 62, "holdt inne:", SMLSIZE, L.C.act)
+    L.text(12, 86, what, SMLSIZE, L.C.text)
+  end
+end
+
 -- Tekstbredde og -høyde. lcd.sizeText finnes i EdgeTX; ellers et anslag.
 local FONT_EST = { [0] = { 10, 24 }, { 10, 24 }, { 7, 16 }, { 8, 20 }, { 15, 34 }, { 20, 44 }, { 39, 80 } }
 function L.textSize(t, font)
@@ -771,6 +802,13 @@ function L.run(event, touch)
   if touch and lcd.toVirtual then touch = lcd.toVirtual(touch) end
   local s = L.top()
   if not s then return 1 end
+  -- Flysperren slo inn mens en farlig skjerm var åpen: lukk den (leave rydder testmiksene)
+  if s.danger and L.lockCheck and L.lockCheck() then
+    while L.top() and L.top().danger do L.pop() end
+    L.toast("Lukket: motorbryteren er på", true)
+    s = L.top()
+    if not s then return 1 end
+  end
   if s.tick then s:tick() end
   s = L.top()
   if not s then return 1 end

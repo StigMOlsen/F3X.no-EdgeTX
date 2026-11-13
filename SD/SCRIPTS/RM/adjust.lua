@@ -69,7 +69,8 @@ return function(L, STD, W, S)
       if def.quick then s.quick = def.quick(s.st) else s.quick = s.st.done.mix end
       -- Testbryteren inne: alle ror i senter, så de er lette å sammenligne mot. Bare når det
       -- er plass til både disse og testmiksene som viser verdiene.
-      local test = s.prof.test and L.ctrl(s.prof.test.ctrl)
+      -- def.noSH: skjermen viser ingen ror, så SH sentrerer ikke (trygt å ha åpen i lufta)
+      local test = not def.noSH and s.prof.test and L.ctrl(s.prof.test.ctrl)
       local sw = test and L.switchIndex(test.key, 1)
       local MAXS = L.findSource({ "max", "MAX" })
       s.shChs = {}
@@ -82,12 +83,14 @@ return function(L, STD, W, S)
       end
       -- Plass: én per ror, pluss testmiksene skjermen selv trenger (def.tmpNeed, ellers 1)
       local tmpNeed = s.room and #s.room.chs or def.tmpNeed or 1
-      if sw and MAXS and L.mixTotal() + #chs + tmpNeed <= STD.maxMixes then
+      -- Ikke SH-senter når flysperren er på: et trykk på SH i lufta skal ikke sentrere rorene
+      if sw and MAXS and not W.locked() and L.mixTotal() + #chs + tmpNeed <= STD.maxMixes then
         for _, c in ipairs(chs) do
           if L.shAdd(c.ch, MAXS, sw) then s.shChs[#s.shChs + 1] = c.ch end
         end
       end
       s.shLabel = #s.shChs > 0 and test.label or nil
+      s.shBlocked = sw and MAXS and #s.shChs == 0 and not W.locked() and test.label or nil
       if #s.entries > 0 then setup() end
     end
 
@@ -97,6 +100,9 @@ return function(L, STD, W, S)
       s.shChs = {}
       if s.room then W.restoreRoom(s.room); s.room = nil end
     end
+
+    -- Tilbake fra en underskjerm (def.extra): sett opp testmikser og pot på nytt, samme verdi
+    function s:resume() s:enter() end
 
     function s:tick()
       if #s.entries == 0 then return end
@@ -212,7 +218,7 @@ return function(L, STD, W, S)
       if def.info then def.info(s, e, 430, y) end
       L.dualHint(s.dual, 12, 385)
       L.dualWait(s.dual, 430, 362)
-      if s.shLabel then L.text(12, 362, "Hold " .. s.shLabel .. " inne: alle ror i senter.", SMLSIZE, L.C.dim) end
+      if s.shLabel or s.shBlocked then L.shNote(s.shLabel or s.shBlocked, "alle ror i senter", not s.shLabel) end
       local quick = s.quick and not def.select and #s.entries > 1
       local items = { { "Avbryt", cancel } }
       if not quick then
@@ -220,6 +226,16 @@ return function(L, STD, W, S)
           { enabled = s.k > 1 and not def.select } }
       end
       items[#items + 1] = { "Nullstill pot", function() s.base = s.val; L.dualStart(s.dual, true) end }
+      -- Underskjerm (f.eks. Kalibrer i steg 4): denne skjermen rydder testmiksene først
+      if def.extra and def.extra.show(s.st) then
+        items[#items + 1] = { def.extra.label, function()
+          commit()
+          s:leave()
+          local x = def.extra.screen()
+          x.danger = s.danger
+          L.push(x)
+        end, { primary = false } }
+      end
       if e.fm then
         items[#items + 1] = { "Kopier alle FM", function()
           commit()
@@ -290,6 +306,8 @@ return function(L, STD, W, S)
     end
 
     def.leave = clearAll
+    def.extra = { label = "Kalibrer", screen = function() return A.calScreen() end,
+      show = function(st) return #S.calPairs(st.cfg) > 0 end }
 
     function def.done(st, prof)
       clearAll()
@@ -297,6 +315,72 @@ return function(L, STD, W, S)
       if st.done.mix then S.write(S.plan(st.cfg, prof, st), st) end   -- skriv mikserne med de nye utslagene
     end
 
+    return A.adjustScreen(def)
+  end
+
+  ----------------------------------------------------------------------
+  -- Kalibrering (fra steg 4): høyre ror mot samme ror på venstre side i 3 punkter
+  -- hver vei (25, 50 og 75 % opp og ned). Begge rorene står i punktet med testmiks;
+  -- potten retter høyre ror til det har samme utslag som venstre. Ligger som
+  -- utgangskurve på høyre kanal, så alle mikser (rull, camber, crow) får rettelsen.
+
+  function A.calScreen()
+    local MAXS = L.findSource({ "max", "MAX" })
+    local shown = {}
+    local def = { title = "Kalibrer høyre side", doneText = "Kalibrering lagret", tmpNeed = 2 }
+    function def.room(st)
+      local t = {}
+      for _, cp in ipairs(S.calPairs(st.cfg)) do t[#t + 1] = cp.l; t[#t + 1] = cp.r end
+      return t
+    end
+    function def.quick(st) return st.done.cal end
+    local function show(cp, x)
+      for ch in pairs(shown) do
+        if ch ~= cp.l.ch and ch ~= cp.r.ch then L.tmpClear(ch); shown[ch] = nil end
+      end
+      for _, c in ipairs({ cp.l, cp.r }) do
+        if not L.setMix(c.ch, L.TMP, { weight = x }) then L.tmpClear(c.ch); L.tmpAdd(c.ch, MAXS, x, 0) end
+        shown[c.ch] = true
+      end
+    end
+    function def.leave()
+      for ch in pairs(shown) do L.tmpClear(ch) end
+      shown = {}
+    end
+    local function signed(v) return (v > 0 and "+" or "") .. v .. " %" end
+    -- Rekkefølge: 25, 50, 75 opp, så 25, 50, 75 ned (indeks i S.CAL_X)
+    local ORDER = { 4, 5, 6, 3, 2, 1 }
+    function def.entries(st, prof)
+      local list = {}
+      for _, cp in ipairs(S.calPairs(st.cfg)) do
+        local k = S.calValues(st, cp.r.role)
+        for _, i in ipairs(ORDER) do
+          local x = S.CAL_X[i]
+          local dir = math.abs(x) .. " % " .. (x > 0 and "opp" or "ned")
+          list[#list + 1] = {
+            label = cp.r.name .. "  " .. dir, min = -S.CAL_MAX, max = S.CAL_MAX, span = 10, fine = 1,
+            fmt = signed, roles = { cp.r.role, cp.l.role },
+            hint = { cp.l.name .. " og " .. cp.r.name .. " står på " .. dir .. ".",
+              "Juster " .. cp.r.name .. " til samme utslag som " .. cp.l.name .. "." },
+            graph = function(v)
+              local pts = { { -100, 0 } }
+              for j, xj in ipairs(S.CAL_X) do
+                if j == 4 then pts[#pts + 1] = { 0, 0 } end
+                pts[#pts + 1] = { xj, j == i and v or k[j] }
+              end
+              pts[#pts + 1] = { 100, 0 }
+              return pts, { active = i < 4 and i + 1 or i + 2, range = A.range(pts), cursor = x }
+            end,
+            get = function() return k[i] end,
+            set = function(_, v) k[i] = v; S.applyCal(st, prof, cp) end,
+            prep = function() show(cp, x) end,
+          }
+        end
+      end
+      return list
+    end
+    function def.done(st) st.done.cal = true end
+    def.empty = "Ingen ror med venstre og høyre side."
     return A.adjustScreen(def)
   end
 
@@ -396,9 +480,11 @@ return function(L, STD, W, S)
       local list = {}
       for _, c in ipairs(wingRoles(st.cfg)) do
         local flap = S.FLAPS[c.role] ~= nil
+        -- Flaps går bare ned. Ailerons kan gå opp (+) eller ned (-) ved crow (Jo Grini 2026-11-09).
         list[#list + 1] = {
-          label = c.name .. (flap and "  ned" or "  opp"), min = 0, max = 100, span = 50, roles = { c.role },
-          hint = { "Trekk butterfly-kontrollen helt (full crow).", flap and "Flaps ned." or "Ailerons opp." },
+          label = c.name .. (flap and "  ned" or ""), min = flap and 0 or -100, max = 100, span = 50,
+          fmt = not flap and updown or nil, roles = { c.role },
+          hint = { "Trekk butterfly-kontrollen helt (full crow).", flap and "Flaps ned." or "Ailerons opp (+) eller ned (-)." },
           get = function() return st.adj.crow[c.role] end,
           set = function(_, v) st.adj.crow[c.role] = v; S.applyCrow(st, c.role) end,
         }
@@ -457,6 +543,146 @@ return function(L, STD, W, S)
       return k
     end
     return A.adjustScreen(def)
+  end
+
+  -- Høyderor ved butterfly i lufta (Stig 2026-11-09): butterfly-stikka velger punktet (samme
+  -- 7 punkter som kurven), høyderorsstikka holder flyet i rett flukt, og et kort klikk på
+  -- testbryteren (SH) legger stikkeutslaget inn i punktet. Langt trykk (over 1 s) angrer
+  -- siste lagring. Stemmen sier punktet og «lagret», så skjermen trenger ikke leses i lufta.
+  -- Ingen testmikser og ingen SH-senter: skjermen er trygg å ha åpen i lufta.
+  local AIR = {
+    near = 10,       -- % fra punktet på butterfly-stikka
+    window = 50,     -- stikka midles over 0,5 s før klikket (getTime: 10 ms)
+    steady = 5,      -- % største variasjon i vinduet
+    maxStep = 15,    -- % største endring per klikk
+    long = 100,      -- langt trykk = angre (1 s)
+  }
+  function A.eleAirScreen()
+    local s = { hist = {}, undo = {} }
+    local function snd(n) playFile("/SOUNDS/en/" .. n .. ".wav") end
+
+    -- Rorets utslag per side for høyderorsstikka (V-hale: snittet av de to sidene)
+    local function rate(sd)
+      local roles = s.st.cfg.tail == "V" and { "vL", "vR" } or { "elev" }
+      local sum = 0
+      for _, r in ipairs(roles) do sum = sum + S.rate(s.st, r, "ele", sd) end
+      return sum / #roles
+    end
+    -- Hva stikka (x i -1..1) gir på høyderorskanalen i %, med expo som i miksene.
+    -- Ele-miksene har vekt -utslag (negativ = ror ned), og kurven EKo legges til med vekt 100.
+    function s.delta(x)
+      local e = (s.st.adj.expo and s.st.adj.expo.ele) or 0
+      local xe = S.expo(x, -e)
+      return -xe * rate(xe > 0 and 1 or -1)
+    end
+
+    local function point()
+      if not (s.crow and s.crow.id) then return nil end
+      local x = L.value(s.crow) / 10.24
+      for i, p in ipairs(XS) do if math.abs(x - p) <= AIR.near then return i end end
+      return nil
+    end
+
+    -- Snittet av stikka i vinduet før t, eller nil hvis den ikke har stått i ro
+    local function steadyAvg(t)
+      local n, sum, lo, hi = 0, 0, 2, -2
+      for _, h in ipairs(s.hist) do
+        if h[1] <= t and h[1] >= t - AIR.window then
+          n = n + 1; sum = sum + h[2]; lo = math.min(lo, h[2]); hi = math.max(hi, h[2])
+        end
+      end
+      if n < 3 or (hi - lo) * 100 > AIR.steady then return nil end
+      return sum / n
+    end
+
+    local function write()
+      S.writeCurve(s.st.cfg, s.prof, s.st, C.eleComp)
+      W.saveState()
+    end
+
+    local function save(t)
+      local k = s.pt
+      if not k then snd("ikkpkt"); return end
+      local x = steadyAvg(t)
+      if not x then snd("urolig"); return end
+      local d = L.clamp(L.round(s.delta(x)), -AIR.maxStep, AIR.maxStep)
+      local comp = s.st.adj.eleComp
+      s.undo[#s.undo + 1] = { k, comp[k] }
+      comp[k] = L.clamp(comp[k] + d, -100, 100)
+      write()
+      s.last = { k = k, d = d }
+      snd("lagrok")
+    end
+
+    local function undo()
+      local u = table.remove(s.undo)
+      if not u then return end
+      s.st.adj.eleComp[u[1]] = u[2]
+      write()
+      s.last = nil
+      snd("angret")
+    end
+    s.undoLast = undo
+
+    function s:enter()
+      s.st = W.state()
+      s.prof = W.profile() or {}
+      S.defaults(s.st)
+      s.crow = s.prof.crow and L.ctrl(s.prof.crow.ctrl)
+      s.test = s.prof.test and L.ctrl(s.prof.test.ctrl)
+      s.ele = L.ctrl("ele") or { id = L.findSource({ "ele", "Ele", "ELE" }) }
+    end
+
+    function s:tick()
+      local now = getTime()
+      local x = (s.ele and s.ele.id) and getValue(s.ele.id) / 1024 or 0
+      s.x = x
+      s.hist[#s.hist + 1] = { now, x }
+      while #s.hist > 0 and s.hist[1][1] < now - 2 * AIR.window do table.remove(s.hist, 1) end
+      local k = point()
+      if k ~= s.pt then
+        s.pt = k
+        if k then snd("pkt" .. k) end
+      end
+      -- SH: kort klikk = lagre (stikka før trykket), langt trykk = angre
+      local on = s.test and s.test.id and L.value(s.test) > 0
+      if on and not s.down then s.down, s.longDone = now, false end
+      if on and s.down and not s.longDone and now - s.down >= AIR.long then s.longDone = true; undo() end
+      if not on and s.down then
+        if not s.longDone then save(s.down) end
+        s.down = nil
+      end
+    end
+
+    function s:draw(list)
+      local G = W.G
+      L.header("Høyderor ved butterfly i lufta", fmName(currentFM()))
+      if not (s.crow and s.crow.id and s.test and s.test.id) then
+        L.text(20, 70, "Mangler butterfly-kontroll eller testbryter i pilotoppsettet.")
+        L.btnRow(list, { { "Tilbake", function() L.pop() end } })
+        return
+      end
+      local comp = s.st.adj.eleComp
+      L.text(20, 60, s.pt and ("Punkt " .. s.pt .. "  (" .. s.crow.label .. " " .. XS[s.pt] .. " %)") or "Ikke på punkt",
+        DBLSIZE, s.pt and L.C.act or L.C.dim)
+      if s.pt then L.text(20, 112, "Kurve nå: " .. updown(comp[s.pt]), MIDSIZE) end
+      L.text(20, 150, "Stikka gir nå: " .. updown(L.clamp(L.round(s.delta(s.x or 0)), -AIR.maxStep, AIR.maxStep)), 0, L.C.text)
+      if s.last then
+        L.text(20, 180, "Lagret: punkt " .. s.last.k .. " " .. updown(s.last.d), 0, L.C.ok)
+      end
+      L.text(20, 222, "1. Trekk " .. s.crow.label .. " til et punkt (radioen sier punktet).", SMLSIZE, L.C.dim)
+      L.text(20, 244, "2. Hold flyet i rett flukt med høyderorsstikka.", SMLSIZE, L.C.dim)
+      L.text(20, 266, "3. Kort klikk " .. s.test.label .. ": lagres. Slipp stikka.", SMLSIZE, L.C.dim)
+      L.text(20, 288, "Langt trykk " .. s.test.label .. " (1 s): angre. Maks " .. AIR.maxStep .. " % per klikk.", SMLSIZE, L.C.dim)
+      L.text(20, 318, "Grov forskyvning: høyderorstrimmen i Landing.", SMLSIZE, L.C.dim)
+      local pts = {}
+      for j = 1, 7 do pts[j] = { XS[j], comp[j] } end
+      G.curve(440, 120, 340, 200, pts, { active = s.pt, range = A.range(pts), cursor = L.value(s.crow) / 10.24 })
+      L.btnRow(list, { { "Angre", undo, { enabled = #s.undo > 0, primary = false } },
+        { "Ferdig", function() L.toast("Kurven er lagret"); L.pop() end } })
+    end
+
+    return s
   end
 
   local function perFMScreen(kind, title, label, hint, max, extra, roles)
@@ -532,6 +758,36 @@ return function(L, STD, W, S)
       return list
     end
     def.empty = "Modellen har ikke motor (steg 0)."
+    return A.adjustScreen(def)
+  end
+
+  -- Overgang mellom flymoduser: hvor lang tid det tar å gå over til (og ut av) flymodusen.
+  -- Normal, Termikk, Speed og motor (felles). Landing og Launch er faste.
+  local function fadeScreen()
+    local def = { title = "Overgang mellom flymoduser", noSH = true }
+    function def.entries(st, prof)
+      local used = {}
+      for _, fm in ipairs(S.usedFMs(st.cfg, prof)) do used[fm] = true end
+      for _, fm in ipairs(S.motorFMs(st.cfg, prof)) do used[fm] = true end
+      local fmt = function(v) return string.format("%.1f s", v / 10) end
+      local list = {}
+      local function entry(g, key, label, hint)
+        list[#list + 1] = {
+          label = label, min = 0, max = V.fadeMax, span = V.fadeMax / 2, fine = 1, fmt = fmt, hint = hint,
+          get = function() return st.adj[key][g.key] end,
+          set = function(_, v) st.adj[key][g.key] = v; S.applyFade(st, prof, g.key) end,
+        }
+      end
+      for _, g in ipairs(S.FADE_GROUPS) do
+        if used[g.fms[1]] then
+          entry(g, "fadeIn", "Inn til " .. g.name, { "Tiden det tar å gå over til " .. g.name .. ".",
+            "0 = straks, maks 3 s. Prøv med flymodusbryteren." })
+          entry(g, "fadeOut", "Ut av " .. g.name, { "Tiden det tar å gå ut av " .. g.name .. ".",
+            "Overgang A til B: ut av A og inn til B." })
+        end
+      end
+      return list
+    end
     return A.adjustScreen(def)
   end
 
@@ -643,18 +899,21 @@ return function(L, STD, W, S)
 
   function A.menuScreen()
     local s = {}
+    -- 4. felt: farlig i lufta (testmikser låser rorene, eller hele oppsettet kan skrives på nytt)
     local items = {
-      { "Termikk / Speed per ror", camberScreen },
+      { "Termikk / Speed per ror", camberScreen, nil, true },
       { "Butterfly (crow)", crowScreen },
-      { "Høyderor ved butterfly (kurve)", eleCompScreen },
+      { "Høyderor ved butterfly (kurve)", eleCompScreen, nil, true },
+      { "Høyderor ved butterfly i lufta", A.eleAirScreen },
       { "Aileron -> sideror (per FM)", function()
         return perFMScreen("ailRud", "Aileron -> sideror", "Ail -> Rud", { "Gi aileron og se på sideroret." }, 100,
           nil, RUD_ROLES)
       end },
       { "Kikkflapp (per FM)", snapScreen },
-      { "Differensial og expo", diffScreen },
-      { "Aileron -> flaps (per FM)", ailFlapScreen, function(st) return st.cfg.wing >= 4 end },
+      { "Differensial og expo", diffScreen, nil, true },
+      { "Aileron -> flaps (per FM)", ailFlapScreen, function(st) return st.cfg.wing >= 4 end, true },
       { "Motor: nivå og høyderor", motorScreen, function(st) return st.cfg.motor end },
+      { "Overgang mellom flymoduser", fadeScreen },
     }
 
     function s:enter()
@@ -664,12 +923,19 @@ return function(L, STD, W, S)
     end
 
     local function trimName(pf) return (pf and pf.trim) or "-" end
+    local function open(it) return function() local x = it[2](); x.danger = it[4]; L.push(x) end end
 
     function s:draw(list)
       L.header("6 - Justering", fmName(currentFM()))
+      local lock = W.locked()
       for i, it in ipairs(items) do
-        local en = not it[3] or it[3](s.st)
-        L.btn(list, 20, 56 + (i - 1) * 39, 500, 34, it[1], en and function() L.push(it[2]()) end or nil, { left = true, icon = true })
+        local en = (not it[3] or it[3](s.st)) and not (lock and it[4])
+        L.btn(list, 20, 56 + (i - 1) * 31, 500, 28, it[1], en and open(it) or nil, { left = true, icon = true })
+      end
+      if lock then
+        L.text(540, 214, "Sperret etter motor:", SMLSIZE, L.C.warn)
+        L.text(540, 238, "motorbryter av og", SMLSIZE, L.C.warn)
+        L.text(540, 262, "stikkene i ro i 15 s.", SMLSIZE, L.C.warn)
       end
       L.text(540, 62, "Differensial:", SMLSIZE, L.C.dim)
       local prof = s.prof or {}

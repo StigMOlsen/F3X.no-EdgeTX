@@ -3,7 +3,7 @@
 🇳🇴 **Norsk versjon:** [README.md](README.md)
 
 Lua tool for **RadioMaster radios with a colour screen** and EdgeTX 2.12, for example TX16S MK3 (800×480)
-and TX16S MK2 (480×272). The screens adapt to the screen size. Radios with a black-and-white screen
+TX16S MK2 (480×272) and GX15 (480×320, not yet tried on a radio). The screens adapt to the screen size. Radios with a black-and-white screen
 (Boxer, Zorro, Pocket, MT12, GX12, TX12 etc.) are not supported.
 Sets up a glider step by step: the pilot's switches and channels, servo direction, centre,
 end points, rates, flight modes (Normal, Landing, Speed, Thermal, motor), butterfly/crow,

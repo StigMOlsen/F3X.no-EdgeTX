@@ -26,6 +26,55 @@ return function(L, STD, W)
   local CURVE_NAMES = { flapL = "CFL", flapR = "CFR", ailL = "CAL", ailR = "CAR", tipL = "CTL", tipR = "CTR" }
   S.WING_AIL, S.FLAPS, S.ELEV = WING_AIL, FLAPS, ELEV
 
+  -- Kalibrering av høyre side mot venstre (Stig 2026-11-09): mekanikken gir ofte ulikt
+  -- utslag på f.eks. 50 % selv om endepunktene er like. Høyre ror får en 9-punkts
+  -- utgangskurve (Outputs -> Curve) med 3 punkter hver vei: ±25, ±50, ±75 % av kanalen.
+  -- Endepunktene (±100) og senter (0) ligger fast; de settes i steg 2 og 3.
+  -- st.cal[høyre rolle] = { k-75, k-50, k-25, k25, k50, k75 } i % (rettelse på kanalverdien).
+  S.CAL_PAIRS = {
+    { l = "ailL", r = "ailR", curve = "calAilR", name = "KaA" },
+    { l = "flapL", r = "flapR", curve = "calFlapR", name = "KaF" },
+    { l = "tipL", r = "tipR", curve = "calTipR", name = "KaT" },
+    { l = "vL", r = "vR", curve = "calVR", name = "KaV" },
+  }
+  S.CAL_X = { -75, -50, -25, 25, 50, 75 }
+  S.CAL_MAX = 30   -- største rettelse i % per punkt
+
+  -- Parene der begge rorene er i bruk i denne flykonfigen
+  function S.calPairs(cfg)
+    local have, t = {}, {}
+    for _, c in ipairs(W.channels(cfg, false)) do have[c.role] = c end
+    for _, p in ipairs(S.CAL_PAIRS) do
+      if have[p.l] and have[p.r] then
+        t[#t + 1] = { l = have[p.l], r = have[p.r], curve = p.curve, name = p.name }
+      end
+    end
+    return t
+  end
+
+  function S.calValues(st, role)
+    st.cal = st.cal or {}
+    st.cal[role] = st.cal[role] or { 0, 0, 0, 0, 0, 0 }
+    return st.cal[role]
+  end
+
+  local function calActive(st, role)
+    for _, v in ipairs((st.cal or {})[role] or {}) do if v ~= 0 then return true end end
+    return false
+  end
+
+  -- Kurvens y-verdier: -100, -75+k, -50+k, -25+k, 0, 25+k, 50+k, 75+k, 100
+  function S.calCurveY(st, role)
+    local k = S.calValues(st, role)
+    local y = { -100 }
+    for i, x in ipairs(S.CAL_X) do
+      if i == 4 then y[#y + 1] = 0 end
+      y[#y + 1] = x + k[i]
+    end
+    y[#y + 1] = 100
+    return y
+  end
+
   local ALL_FM = 511                       -- 9 flymoduser, bit satt = mixen er av i den modusen
   local function only(fm) return ALL_FM - 2 ^ fm end
   local function xDead() return 100 - 2 * V.crowDead end   -- crow starter her (Throttle-enden er +100)
@@ -125,8 +174,47 @@ return function(L, STD, W)
     a.afFM = a.afFM or L.copy(V.afFM)
     a.motor = a.motor or L.copy(V.motorLevels)
     a.motorEle = a.motorEle or V.motorEle
+    a.fadeIn, a.fadeOut = a.fadeIn or {}, a.fadeOut or {}
+    for _, g in ipairs(S.FADE_GROUPS) do
+      a.fadeIn[g.key] = a.fadeIn[g.key] or V.fade
+      a.fadeOut[g.key] = a.fadeOut[g.key] or V.fade
+    end
     st.adj = a
     return a
+  end
+
+  -- Overgangstid mellom flymoduser (fadeIn og fadeOut hver for seg, tideler sekund, 0-fadeMax),
+  -- stilles i meny 6 for Normal, Speed, Termikk og motor-FM-ene (felles). Landing og Launch har fast V.fade.
+  S.FADE_GROUPS = {
+    { key = "normal", name = "Normal", fms = { 0 } },
+    { key = "thermal", name = "Thermal", fms = { 4 } },
+    { key = "speed", name = "Speed", fms = { 3 } },
+    { key = "motor", name = "Motor", fms = { 5, 6, 7 } },
+  }
+  local FADE_KEY = {}
+  for _, g in ipairs(S.FADE_GROUPS) do for _, fm in ipairs(g.fms) do FADE_KEY[fm] = g.key end end
+  -- Inn- og ut-tid for flymodusen. Overgang A -> B: A tones ut med sin ut-tid og B inn med
+  -- sin inn-tid (EdgeTX), så hver overgang kan få sin egen tid.
+  function S.fadeFor(st, fm)
+    local k = FADE_KEY[fm]
+    local a = st and st.adj
+    local i = k and a and a.fadeIn and a.fadeIn[k]
+    local o = k and a and a.fadeOut and a.fadeOut[k]
+    return L.clamp(i or V.fade, 0, V.fadeMax), L.clamp(o or V.fade, 0, V.fadeMax)
+  end
+
+  -- Skriv overgangstiden for én gruppe straks: hele flymodusen fra planen, som ved skriving
+  function S.applyFade(st, prof, key)
+    if not model.setFlightMode then return end
+    local p = S.plan(st.cfg, prof, st)
+    for _, g in ipairs(S.FADE_GROUPS) do
+      if g.key == key then
+        for _, fm in ipairs(g.fms) do
+          local t = p.fms[fm]
+          if t and t.name ~= "" then pcall(model.setFlightMode, fm, t) end
+        end
+      end
+    end
   end
 
   -- Flymodusene som brukes på denne modellen (FM-nummer)
@@ -248,6 +336,9 @@ return function(L, STD, W)
       d[C.crow] = curveDef("Crw", cy, cx, crowRev)
     end
     d[C.crowRed] = curveDef("CrR", { a.crowRed, 100, 100 }, xs, crowRev)
+    for _, cp in ipairs(S.calPairs(cfg)) do
+      if calActive(st, cp.r.role) then d[C[cp.curve]] = curveDef(cp.name, S.calCurveY(st, cp.r.role)) end
+    end
     d[C.eleComp] = curveDef("ECo", a.eleComp)   -- etter stikkas rå posisjon, som i læringen
     if cfg.motor then
       local y = {}
@@ -293,6 +384,7 @@ return function(L, STD, W)
       table.insert(p.mixes[ch], m)
     end
 
+    local RAW = { ail = SRC.ail, ele = SRC.ele }   -- stikkene uten expo (flysperren)
     -- Expo: stikka går gjennom en virtuell kanal med expo, og alle mikserne bruker den kanalen.
     -- Bare når expo ikke er 0, så standardoppsettet ikke bruker flere mikser.
     for f, ch in pairs(EXPO_CH) do
@@ -464,6 +556,18 @@ return function(L, STD, W)
         -- Sperre: settes av Landing med motor på, nullstilles når motorbryteren settes av
         p.ls[LS.lock] = { func = LS_FUNC_STICKY, v1 = l3, v2 = -l2, label = "Motor lock" }
         p.ls[LS.motorRun] = { func = LS_FUNC_AND, v1 = l2, v2 = -l4, label = "Motor allowed" }
+        -- Flysperre: farlige menyer sperres når motorbryteren har vært på, til aileron og
+        -- høyderor har vært i ro i quietSec med motorbryteren av (flyet står på bakken)
+        local la, le, lq = sw(LS.ailAct), sw(LS.eleAct), sw(LS.quiet)
+        if la and le and lq and RAW.ail and RAW.ele and LS_FUNC_APOS then
+          p.ls[LS.ailAct] = { func = LS_FUNC_APOS, v1 = RAW.ail, v2 = V.quietPct, label = "Aileron in use" }
+          p.ls[LS.eleAct] = { func = LS_FUNC_APOS, v1 = RAW.ele, v2 = V.quietPct, label = "Elevator in use" }
+          p.ls[LS.quiet] = { func = LS_FUNC_AND, v1 = -la, v2 = -le, ["and"] = -l2, delay = V.quietSec * 10,
+            label = "Sticks still " .. V.quietSec .. " s" }
+          p.ls[LS.flyLock] = { func = LS_FUNC_STICKY, v1 = l2, v2 = lq, label = "Flight lock" }
+        else
+          note("Flight lock not set up (sticks or L15-L18 not found).")
+        end
         -- Motor-FM per motortrinn (3-pos bryter): motor tillatt OG bryterposisjon
         if #motFMs == 3 then
           local pr = prof.motor_pwr
@@ -513,7 +617,8 @@ return function(L, STD, W)
       if ti then trims[ti + 1] = 2 * f.fm end
       if vti then trims[vti + 1] = 0 end   -- V-hale-differensial (T5): felles, følger Normal i alle FM
       if f.fm == 0 then
-        p.fms[0] = { name = f.name, fadeIn = V.fade, fadeOut = V.fade, trimsModes = trims }
+        local fi, fo = S.fadeFor(st, 0)
+        p.fms[0] = { name = f.name, fadeIn = fi, fadeOut = fo, trimsModes = trims }
         p.fmNames[#p.fmNames + 1] = f.name
       elseif useFM[f.fm] then
         local s
@@ -527,7 +632,8 @@ return function(L, STD, W)
           end
         end
         if not s then err("Switch not found for " .. f.name .. ".") end
-        p.fms[f.fm] = { name = f.name, switch = s or 0, fadeIn = V.fade, fadeOut = V.fade, trimsModes = trims }
+        local fi, fo = S.fadeFor(st, f.fm)
+        p.fms[f.fm] = { name = f.name, switch = s or 0, fadeIn = fi, fadeOut = fo, trimsModes = trims }
         p.fmNames[#p.fmNames + 1] = f.name
       elseif motorOk and motFM[f.fm] then
         -- Egen høyderorstrim per motortrinn, diff-, side- og aileron-trim som Normal
@@ -535,7 +641,8 @@ return function(L, STD, W)
         if ti then trims[ti + 1] = 0 end
         trims[1], trims[4] = 0, 0
         local name = #motFMs == 1 and "Motor" or f.name
-        p.fms[f.fm] = { name = name, switch = s or 0, fadeIn = V.fade, fadeOut = V.fade, trimsModes = trims }
+        local fi, fo = S.fadeFor(st, f.fm)
+        p.fms[f.fm] = { name = name, switch = s or 0, fadeIn = fi, fadeOut = fo, trimsModes = trims }
         p.fmNames[#p.fmNames + 1] = name
       else
         p.fms[f.fm] = { name = "", switch = 0 }
@@ -706,6 +813,7 @@ return function(L, STD, W)
     for _, c in ipairs(W.channels(st.cfg, true)) do L.setOutput(c.ch - 1, { name = c.name }) end
     for ch, name in pairs(p.outputs) do L.setOutput(ch - 1, { name = name }) end
     if st.auxCh then L.setOutput(st.auxCh - 1, { name = STD.names.aux }) end
+    for _, cp in ipairs(S.calPairs(st.cfg)) do S.calOutput(st, cp) end
     if st.cfg.motor then   -- motor av 1003 µs, full 1998 µs
       L.setOutput(STD.ch.motor - 1, { min = V.motorMin, max = V.motorMax, ppmCenter = 0 })
     end
@@ -715,7 +823,8 @@ return function(L, STD, W)
     -- Logiske brytere (felt som utelates nullstilles av EdgeTX, så alle tas med)
     for _, i in pairs(LS) do
       local t = p.ls[i]
-      local v = t and { func = t.func, v1 = t.v1, v2 = t.v2, v3 = 0, ["and"] = 0, delay = 0, duration = 0 }
+      local v = t and { func = t.func, v1 = t.v1, v2 = t.v2, v3 = 0, ["and"] = t["and"] or 0, delay = t.delay or 0,
+        duration = 0 }
         or { func = LS_FUNC_NONE or 0, v1 = 0, v2 = 0, v3 = 0, ["and"] = 0, delay = 0, duration = 0 }
       local ok, e = pcall(model.setLogicalSwitch, i, v)
       if not ok then fail("L" .. (i + 1) .. ": " .. tostring(e)) end
@@ -760,6 +869,19 @@ return function(L, STD, W)
 
   function S.applyCamber(st, prof, role)
     return S.writeCurve(st.cfg, prof, st, C[role])
+  end
+
+  -- Høyre ror: utgangskurven på kanalen, eller ingen kurve når alle rettelsene er 0.
+  -- EdgeTX Lua: output.curve er 0-basert kurveindeks, -1 = ingen (lagres som curve + 1).
+  function S.calOutput(st, cp)
+    L.setOutput(cp.r.ch - 1, { curve = calActive(st, cp.r.role) and C[cp.curve] or -1 })
+  end
+
+  function S.applyCal(st, prof, cp)
+    local ok = true
+    if calActive(st, cp.r.role) then ok = S.writeCurve(st.cfg, prof, st, C[cp.curve]) end
+    S.calOutput(st, cp)
+    return ok
   end
 
   function S.applyCrow(st, role)

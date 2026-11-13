@@ -134,6 +134,26 @@ return function(L, STD)
     end
   end
 
+  -- Tidsaksen tilpasser seg flytiden: hele bredden brukes fra første punkt, og aksen strekkes
+  -- etter hvert til graphSpan (30 min). Lengre flyging: de siste 30 min. Gir også første punkt i
+  -- vinduet og avstanden mellom de loddrette linjene (3-6 linjer).
+  local GRID = { 10, 15, 30, 60, 120, 300, 600 }
+  local function timeWindow(h)
+    local n = #h.t
+    local t1 = n > 0 and h.t[n] or 0
+    local t0 = n > 0 and h.t[1] or 0
+    if t1 - t0 > V.graphSpan then t0 = t1 - V.graphSpan end
+    if t1 - t0 < 1 then t1 = t0 + 1 end
+    local first = 1
+    while first < n and h.t[first] < t0 do first = first + 1 end
+    local grid = GRID[#GRID]
+    for _, g in ipairs(GRID) do
+      if (t1 - t0) / g <= 6 then grid = g; break end
+    end
+    return t0, t1, first, grid
+  end
+  F.timeWindow = timeWindow
+
   -- Graf over batteri ("v"), link ("q") eller de to mottakerantennene ("a") for flygingen så langt
   function F.graphScreen(kind, info)
     local s = {}
@@ -176,10 +196,7 @@ return function(L, STD)
       local a1, a2 = h.a1 or {}, h.a2 or {}
       L.header("Graf: antenne 1 og 2 (dBm)", n > 0 and F.clock(h.t[n]) or nil)
       local lo, hi = -110, -30
-      local t1 = math.max(V.graphSpan, n > 0 and h.t[n] or 0)
-      local t0 = t1 - V.graphSpan
-      local first = 1
-      while first < n and h.t[first] < t0 do first = first + 1 end
+      local t0, t1, first, grid = timeWindow(h)
       local function X(t) return X0 + (X1 - X0) * (t - t0) / (t1 - t0) end
       local function Y(v) return Y1 - (Y1 - Y0) * (L.clamp(v, lo, hi) - lo) / (hi - lo) end
       lcd.drawFilledRectangle(X0, Y0, X1 - X0, Y1 - Y0, L.C.panel)
@@ -188,7 +205,7 @@ return function(L, STD)
         line(X0, y, X1, y, L.C.off)
         L.text(X0 - 8, y - 8, tostring(v), SMLSIZE + RIGHT, L.C.dim)
       end
-      for t = t0 - t0 % 300 + 300, t1 - 1, 300 do
+      for t = t0 - t0 % grid + grid, t1 - 1, grid do
         local x = floor(X(t) + 0.5)
         line(x, Y0, x, Y1, L.C.off, DOTTED)
       end
@@ -254,11 +271,7 @@ return function(L, STD)
       L.header(kind == "q" and "Graf: link (RQly)" or ("Graf: " .. (info.cells and "motorbatteri" or "batteri")),
         n > 0 and F.clock(h.t[n]) or nil)
       local lo, hi = range(h)
-      -- Fast tidsakse på graphSpan (30 min) fra start. Lengre flyging: de siste 30 min.
-      local t1 = math.max(V.graphSpan, n > 0 and h.t[n] or 0)
-      local t0 = t1 - V.graphSpan
-      local first = 1   -- første punkt i vinduet
-      while first < n and h.t[first] < t0 do first = first + 1 end
+      local t0, t1, first, grid = timeWindow(h)
       local function X(t) return X0 + (X1 - X0) * (t - t0) / (t1 - t0) end
       local function Y(v) return Y1 - (Y1 - Y0) * (L.clamp(v, lo, hi) - lo) / (hi - lo) end
 
@@ -274,8 +287,8 @@ return function(L, STD)
           L.text(X1 + 4, y - 8, string.format("%.2f", v / info.cells), SMLSIZE, L.C.dim)
         end
       end
-      -- Loddrette linjer hvert 5. minutt
-      for t = t0 - t0 % 300 + 300, t1 - 1, 300 do
+      -- Loddrette linjer med jevne mellomrom (grid sekunder, etter hvor lang tidsaksen er)
+      for t = t0 - t0 % grid + grid, t1 - 1, grid do
         local x = floor(X(t) + 0.5)
         line(x, Y0, x, Y1, L.C.off, DOTTED)
       end

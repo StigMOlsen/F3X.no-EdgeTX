@@ -4,14 +4,15 @@
 -- vises i overskriften og på menyknappene her.
 local toolName = "TNS|F3X.no|TNE"
 
+-- 4. felt: sperret etter motor (flysperren, se std.lua ls.flyLock)
 local APPS = {
   { "Flightscreen", "Timers, link and flight log", "/SCRIPTS/RM/APPS/flyskjerm.lua" },
   { "Setup wizard", "New model or change setup", "/SCRIPTS/RM/APPS/veiviser.lua" },
-  { "Pilot setup", "Switches and controls", "/SCRIPTS/RM/APPS/pilot.lua" },
+  { "Pilot setup", "Switches and controls", "/SCRIPTS/RM/APPS/pilot.lua", true },
   { "Diagnostics", "Lua API test (empty test model)", "/SCRIPTS/RM/APPS/diag.lua" },
 }
 
-local L, err, active
+local L, err, active, LOCK_LS
 
 local function start(path)
   local chunk = loadScript(path)
@@ -26,9 +27,10 @@ local function menu()
   function s:draw(list)
     L.header("F3X.no", "RadioMaster tools")
     local step = math.min(84, math.floor(350 / #APPS))   -- plass over knapperaden nederst
+    local lock = L.flyLocked(LOCK_LS)
     for i, a in ipairs(APPS) do
-      L.btn(list, 20, 62 + (i - 1) * step, 760, step - 10, a[1], function() start(a[3]) end,
-        { left = true, icon = true, right = a[2] })
+      L.btn(list, 20, 62 + (i - 1) * step, 760, step - 10, a[1], not (lock and a[4]) and function() start(a[3]) end or nil,
+        { left = true, icon = true, right = (lock and a[4]) and "Locked after motor" or a[2] })
     end
     L.btnRow(list, { { "Exit", function() L.pop() end } })
   end
@@ -55,6 +57,8 @@ local function init()
   local chunk, e = loadScript("/SCRIPTS/RM/lib.lua")
   if not chunk then err = "Missing or error in /SCRIPTS/RM/lib.lua: " .. tostring(e); return end
   L = chunk()
+  local sc = loadScript("/SCRIPTS/RM/std.lua")
+  LOCK_LS = sc and sc().ls.flyLock
   L.push(menu())
 end
 

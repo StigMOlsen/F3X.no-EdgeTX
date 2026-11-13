@@ -144,9 +144,15 @@ return function(L, STD, P)
 
   -- Når steg 5 er kjørt én gang, skrives oppsettet på nytt automatisk etter hvert steg.
   -- Første gang må steg 5 kjøres for hånd (den varsler om at mikser overskrives).
+  -- Flysperre (motorbryteren har vært på, flyet kan være i lufta): ingen skriving av hele
+  -- oppsettet og ingen skjermer som tar rorene med testmikser
+  function W.locked() return L.flyLocked(STD.ls.flyLock) end
+  L.lockCheck = W.locked
+
   function W.autoWrite()
     local prof = loadProfile()
     if not (st.done.mix and st.cfg and prof and W.S) then return end
+    if W.locked() then st.planVer = nil; saveState(); return end   -- skrives etter landing
     st.planVer = nil
     local _, bad = W.S.write(W.S.plan(st.cfg, prof, st), st)
     saveState()
@@ -161,7 +167,7 @@ return function(L, STD, P)
     local ps = prof and L.ser(prof)
     local changed = ps and st.profSig and st.profSig ~= ps
     if ps and st.profSig ~= ps then st.profSig = ps; saveState() end
-    if st.done.mix and (st.planVer ~= STD.planVersion or changed) then
+    if st.done.mix and (st.planVer ~= STD.planVersion or changed) and not W.locked() then
       W.autoWrite()
       if st.planVer == STD.planVersion then
         L.toast(changed and "Pilot setup changed: setup written again"
@@ -207,9 +213,11 @@ return function(L, STD, P)
       local ready = cfg ~= nil and s.prof ~= nil
       local motor = cfg and cfg.motor
       local d = st.done
-      local function push(f) return function() L.push(f()) end end
+      local lock = W.locked()
+      -- Alle stegene unntatt 6 er farlige i lufta: sperret, og lukkes hvis sperren slår inn
+      local function push(f, safe) return function() local x = f(); x.danger = not safe; L.push(x) end end
       -- Steg som endrer oppsettet: skriv automatisk når du kommer tilbake hit
-      local function pushW(f) return function() s.autoWrite = true; L.push(f()) end end
+      local function pushW(f) return function() s.autoWrite = true; local x = f(); x.danger = true; L.push(x) end end
       local rows = {
         { "0   Model config", cfg and "" or "not set", pushW(W.configScreen), s.prof ~= nil },
         { "1   Servo direction", d.dir and "done" or "-", pushW(W.dirScreen), ready },
@@ -220,17 +228,20 @@ return function(L, STD, P)
         { "E   ESC calibration", motor and (d.esc and "done" or "-") or "no motor", pushW(W.A.escScreen),
           ready and motor },
         { "5   Write setup", d.mix and "written" or "-", push(W.S.writeScreen), ready },
-        { "6   Adjust", d.mix and "" or "after 5", push(W.A.menuScreen), ready and d.mix },
+        { "6   Adjust", d.mix and "" or "after 5", push(W.A.menuScreen, true), ready and d.mix, true },
         { "7   Checklist", ready and (W.A.checkDone(st) .. " / " .. #W.A.CHECKS) or "", push(W.A.checkScreen), ready },
       }
       local colW = math.floor((L.W - 50) / 2)
       for i, r in ipairs(rows) do
         local col, row = (i <= 5) and 0 or 1, (i - 1) % 5
-        L.btn(list, 20 + col * (colW + 10), 60 + row * 54, colW, 46, r[1], r[4] and r[3] or nil,
+        L.btn(list, 20 + col * (colW + 10), 60 + row * 54, colW, 46, r[1], r[4] and (r[5] or not lock) and r[3] or nil,
           { left = true, right = r[2], icon = true })
       end
       -- Slik justeres verdiene (steg 2, 3, 4 og meny 6)
-      if s.prof then
+      if lock then
+        L.text(20, 366, L.LOCK_TEXT, SMLSIZE, L.C.warn)
+        L.text(20, 388, "Only 6 Adjust is open (what is safe in the air).", SMLSIZE, L.C.dim)
+      elseif s.prof then
         L.text(20, 366, "Adjusting: S1 = coarse, S2 = fine. Center both before each surface.",
           SMLSIZE, L.C.text)
         L.text(20, 388, "PAGE>/< or keys 1-6 skip without saving. Only Save/Confirm saves.", SMLSIZE, L.C.dim)
@@ -401,8 +412,8 @@ return function(L, STD, P)
       local _, h = L.fit(430, 56, "CH" .. c.ch .. "  " .. c.name, 360, { DBLSIZE, MIDSIZE })
       L.text(430, 56 + h + 4, "Surface moves " .. neg .. "?", MIDSIZE, L.C.act)
       G.profile(440, 215, 250, W.outV(c.ch), { arrow = 1 })
-      L.text(430, 268, "Hold " .. s.test.label .. " in: all surfaces " .. -V.dirTest .. " %.", SMLSIZE, L.C.dim)
-      L.text(430, 290, "Dashed = neutral. Arrow = correct direction.", SMLSIZE, L.C.dim)
+      L.shNote(s.test.label, "all surfaces " .. -V.dirTest .. " % (down)")
+      L.text(430, 268, "Dashed = neutral. Arrow = correct direction.", SMLSIZE, L.C.dim)
       local out = model.getOutput(c.ch - 1)
       local rev = out and out.revert == 1
       L.text(430, 325, "Direction: " .. (rev and "reversed" or "normal") .. (s.state[c.ch] and "  (changed)" or ""),
@@ -740,6 +751,7 @@ return function(L, STD, P)
         end
       end
       s.shLabel = #s.shChs == #s.chs and test.label or nil
+      s.shBlocked = sw and MAXS and not s.shLabel and test.label or nil
       s.entries = {}
       for _, c in ipairs(s.chs) do
         s.entries[#s.entries + 1] = { ch = c, side = -1 }
@@ -842,8 +854,8 @@ return function(L, STD, P)
       local sideName = e.side < 0 and neg or pos
       L.header("3 - Endpoints", "CH" .. e.ch.ch .. " " .. sideName .. " - " .. s.k .. " of " .. #s.entries)
       local hits = W.plane(st.cfg, { active = e.ch.role,
-        caption = s.shLabel and ("Hold " .. s.shLabel .. " in: all surfaces neutral"),
         color = W.roleColors(s.chs, function(k) return 2 * k < s.k end, e.ch.role) })
+      if s.shLabel or s.shBlocked then L.shNote(s.shLabel or s.shBlocked, "all surfaces neutral", not s.shLabel) end
       title(e.ch.name, sideName)
       L.text(430, 106, "CH" .. e.ch.ch .. " - " .. s.field .. "-limit" ..
         (math.abs(s.L) > 100 and " - Extended limits" or ""), SMLSIZE, L.C.dim)

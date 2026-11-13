@@ -6,8 +6,9 @@ return {
   version = "0.2",
   -- Øk når mikserne, kurvene eller bryterne som skrives endres: et oppsett skrevet med en
   -- eldre versjon skrives da på nytt automatisk når veiviseren eller meny 6 åpnes.
-  planVersion = 7,   -- 4: timerne uten minuttpip (flyskjermen gir stemmen), 5: ekstra av/på-kanal, 6: motor 1003-1998 µs,
+  planVersion = 8,   -- 4: timerne uten minuttpip (flyskjermen gir stemmen), 5: ekstra av/på-kanal, 6: motor 1003-1998 µs,
                      -- 7: differensial-trim med trimområde, V-hale-differensial (T5, felles i alle FM)
+                     -- 8: flysperre (L15-L18): farlige menyer sperret etter motorbryter på
 
   -- Kanalstandard, flyet sett bakfra (6d). V-hale bruker kanalene til Elev og Rud.
   -- Piloten kan endre kanalene i pilotoppsettet (P.applyChannels skriver over ch).
@@ -79,6 +80,7 @@ return {
     centerWarn = 50,    -- us: advarsel om mekanisk justering
     centerMax = 500,    -- us: hele PPM-senterområdet i EdgeTX (PPM_CENTER_MAX)
     centerPot = 80,     -- % av S2-vandringen (fra midten) som gir maks senter/subtrim uten grovkontroll
+    -- S2 (fin) gir dobbelt av verdiene under når S1 finnes (L.FINE_GAIN i lib.lua)
     centerFine = 25,    -- us over halv S2-vandring når grovkontrollen er i bruk
     flapCenterFine = 10,  -- % subtrim over halv S2-vandring når grovkontrollen er i bruk
     -- Flaps: nøytral med subtrim (offset), servosenteret står ca. 30 grader ned
@@ -114,9 +116,12 @@ return {
     crowDiff = 100,     -- % ned-aileron ved full crow (100 = som uten crow, 0 = ingen ned-aileron)
     potSpan = 100,      -- % endring over halv pot-vandring i justeringene (testperioden: stort)
     landingCrow = 10,   -- % crow som slår på Landing (FM1)
+    quietPct = 5,       -- flysperre: stikka regnes som i ro innenfor ±5 %
+    quietSec = 15,      -- flysperre: så lenge aileron og høyderor må være i ro (motorbryter av)
     motorLevels = { 50, 75, 100 },     -- % motor Liten / Medium / Full (M1)
     motorEle = 0,       -- % høyderor opp ved full motor (M5)
-    fade = 5,           -- tideler sekund, myk overgang mellom flymoduser (F1)
+    fade = 5,           -- tideler sekund, myk overgang mellom flymoduser (F1). Standard for alle
+    fadeMax = 30,       -- FM; Normal, Speed, Termikk og Motor stilles i meny 6 (0-3 s, Jo Grini)
     logInterval = 2,    -- tideler sekund, logging til SD-kortet (S6)
     lqWarn = 50,        -- % RQly: varsel om svakt signal (S2)
     rxbtWarn = 45,      -- RxBt i sensorens enhet (4,5 V hvis 1 desimal): varsel (S2)
@@ -166,10 +171,14 @@ return {
   -- Kurver (indeks 0-basert) og logiske brytere (0 = L1) som veiviseren eier
   curves = { flapL = 0, flapR = 1, ailL = 2, ailR = 3, tipL = 4, tipR = 5,
              crow = 6, crowRed = 7, eleComp = 8, motor = 9, camT = 10, camS = 11,
-             ailFlapL = 12, ailFlapR = 13 },   -- Ail->Flap: opp og ned i % av utslaget, per flap
+             ailFlapL = 12, ailFlapR = 13,     -- Ail->Flap: opp og ned i % av utslaget, per flap
+             calAilR = 14, calFlapR = 15, calTipR = 16, calVR = 17 },   -- kalibrering høyre side (utgangskurve)
   ls = { landing = 0, motorOn = 1, landMotor = 2, lock = 3, motorRun = 4, lq = 5, rxbt = 6,
          mot1 = 7, mot2 = 8, mot3 = 9,              -- motor-FM: motor tillatt OG motortrinn
          launchG = 10, speedG = 11, thermalG = 12,  -- FM-bryter OG motoren står (glidefly-FM)
-         trainer = 13 },                             -- trener: lærerbryter OG elevsignal (Trn)
+         trainer = 13,                               -- trener: lærerbryter OG elevsignal (Trn)
+         -- Flysperre (Stig 2026-11-09): settes når motorbryteren er på, nullstilles når aileron-
+         -- og høyderorsstikka har vært i ro (innenfor quietPct) i quietSec med motorbryteren av
+         ailAct = 14, eleAct = 15, quiet = 16, flyLock = 17 },
   maxMixes = 64,
 }
