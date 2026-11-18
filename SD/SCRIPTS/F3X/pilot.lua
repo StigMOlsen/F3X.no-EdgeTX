@@ -135,8 +135,27 @@ return function(L, STD)
   ----------------------------------------------------------------------
   -- Skisse K: velg kontroll for én funksjon om gangen
 
+  local LIST_VIS, LIST_ROW = 11, 32   -- listen til venstre i steg P
+
   function P.selectScreen(prof, startIdx, single, onDone)
     local s = { idx = startIdx or 1 }
+
+    -- Dra fingeren opp/ned i listen til venstre for å rulle
+    function s:onEvent(e, touch)
+      if e == EVT_TOUCH_SLIDE and touch and touch.x and touch.x < 310 and touch.slideY then
+        s.drag = (s.drag or 0) + touch.slideY
+        local rows = math.floor(math.abs(s.drag) / LIST_ROW)
+        if rows > 0 then
+          local d = s.drag < 0 and rows or -rows   -- fingeren opp = lenger ned i listen
+          s.ltop = (s.ltop or 1) + d
+          s.drag = s.drag - (s.drag < 0 and -rows or rows) * LIST_ROW
+        end
+        return true
+      elseif e == EVT_TOUCH_BREAK or e == EVT_TOUCH_FIRST then
+        s.drag = 0
+      end
+      return false
+    end
     local function fn() return P.FUNCS[s.idx] end
 
     local function rebase()
@@ -234,13 +253,30 @@ return function(L, STD)
       local f = fn()
       L.header("Pilotoppsett", s.idx .. " / " .. #P.FUNCS)
 
-      -- Venstre: alle funksjoner
-      for i, g in ipairs(P.FUNCS) do
-        local y = 56 + (i - 1) * 27
+      -- Venstre: alle funksjoner. Standard skrift, 11 rader synlige: listen følger funksjonen
+      -- som stilles, og kan rulles med fingeren (dra opp/ned i listen).
+      local n = #P.FUNCS
+      s.ltop = s.ltop or 1
+      if s.idx ~= s.lastIdx then
+        s.lastIdx = s.idx
+        if s.idx < s.ltop then s.ltop = s.idx end
+        if s.idx > s.ltop + LIST_VIS - 1 then s.ltop = s.idx - LIST_VIS + 1 end
+      end
+      s.ltop = math.max(1, math.min(math.max(1, n - LIST_VIS + 1), s.ltop))
+      for i = s.ltop, math.min(n, s.ltop + LIST_VIS - 1) do
+        local g = P.FUNCS[i]
+        local y = 56 + (i - s.ltop) * LIST_ROW
         local a = (i == s.idx) and s.cur or prof[g.key]
-        if i == s.idx then lcd.drawFilledRectangle(4, y - 2, 296, 26, L.C.focus) end
-        L.text(10, y, g.label, SMLSIZE)
-        L.text(295, y, P.describe(g, a), SMLSIZE + RIGHT, (i < s.idx or single) and L.C.ok or L.C.dim)
+        if i == s.idx then lcd.drawFilledRectangle(4, y - 3, 290, LIST_ROW - 2, L.C.focus) end
+        L.text(10, y, g.label, 0)
+        L.text(288, y, P.describe(g, a), RIGHT, (i < s.idx or single) and L.C.ok or L.C.dim)
+      end
+      if n > LIST_VIS then
+        local h = LIST_VIS * LIST_ROW - 6
+        local bh = math.max(20, math.floor(h * LIST_VIS / n))
+        local by = 54 + math.floor((h - bh) * (s.ltop - 1) / (n - LIST_VIS))
+        lcd.drawFilledRectangle(300, 54, 4, h, L.C.off)
+        lcd.drawFilledRectangle(299, by, 6, bh, L.C.act)
       end
 
       -- Høyre: aktiv funksjon
@@ -372,55 +408,21 @@ return function(L, STD)
   end
 
   function P.overviewScreen(prof, onSaved)
-    local s = { top = 1 }
-    local VIS, ROW_H, Y0 = 7, 44, 56   -- 7 rader synlige, resten rulles fram
-
-    local function scroll(d)
-      local n = #P.FUNCS
-      s.top = math.max(1, math.min(math.max(1, n - VIS + 1), s.top + d))
-    end
-
-    -- Rullehjulet: ned/opp i listen og rull når markeringen går utenfor
-    function s:onEvent(e)
-      local n = #P.FUNCS
-      local sel = s.focus and s.focus <= math.min(VIS, n) and (s.top + s.focus - 1) or nil
-      if not sel then return false end
-      if e == EVT_VIRTUAL_NEXT and sel < n then
-        if sel + 1 > s.top + VIS - 1 then scroll(1) end
-        s.focus = sel + 1 - s.top + 1
-        return true
-      elseif e == EVT_VIRTUAL_PREV and sel > 1 then
-        if sel - 1 < s.top then scroll(-1) end
-        s.focus = sel - 1 - s.top + 1
-        return true
-      end
-      return false
-    end
+    local s = {}
 
     function s:draw(list)
       L.header("Pilotoppsett - oversikt", "trykk på en rad for å endre")
       local n = #P.FUNCS
-      local last = math.min(n, s.top + VIS - 1)
-      for i = s.top, last do
-        local f = P.FUNCS[i]
-        local a = prof[f.key]
-        local on, pct = P.live(f, a)
-        local right = P.describe(f, a)
-        if pct then right = right .. "  " .. (pct > 0 and "+" or "") .. pct .. " %" end
-        L.btn(list, 10, Y0 + (i - s.top) * ROW_H, 700, ROW_H - 6, f.label,
+      local half = math.ceil(n / 2)
+      for i, f in ipairs(P.FUNCS) do
+        local col = (i <= half) and 0 or 1
+        local row = (i <= half) and (i - 1) or (i - 1 - half)
+        local on = P.live(f, prof[f.key])
+        L.btn(list, 10 + col * 395, 58 + row * 42, 385, 38, f.label,
           function() L.push(P.selectScreen(prof, i, true)) end,
-          { left = true, right = right, font = BOLD, textColor = on and L.C.ok or nil })
+          { left = true, right = P.describe(f, prof[f.key]), textColor = on and L.C.ok or nil })
       end
-      -- Rullepiler og rullefelt til høyre
-      local h = VIS * ROW_H - 6
-      L.btn(list, 720, Y0, 70, 60, CHAR_UP or "Opp", s.top > 1 and function() scroll(-VIS) end or nil)
-      L.btn(list, 720, Y0 + h - 60, 70, 60, CHAR_DOWN or "Ned", last < n and function() scroll(VIS) end or nil)
-      local th = h - 130
-      local bh = math.max(20, math.floor(th * VIS / n))
-      local by = Y0 + 65 + math.floor((th - bh) * (s.top - 1) / math.max(1, n - VIS))
-      lcd.drawFilledRectangle(752, Y0 + 65, 6, th, L.C.track or L.C.off)
-      lcd.drawFilledRectangle(750, by, 10, bh, L.C.act)
-      local y = Y0 + VIS * ROW_H + 2
+      local y = 58 + half * 42 + 4
       L.text(15, y, "Grønn = bryteren står slik at funksjonen er på nå. " ..
         "Normal (FM0): når ingen annen flymodus er på.", SMLSIZE, L.C.dim)
       local w = P.warnings(prof)

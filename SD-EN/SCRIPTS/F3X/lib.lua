@@ -845,7 +845,7 @@ function L.run(event, touch)
     end
   end
 
-  if event ~= 0 and s.onEvent and s:onEvent(event) then
+  if event ~= 0 and s.onEvent and s:onEvent(event, touch) then
     -- tatt av skjermen (f.eks. PAGE> / PAGE<)
   elseif event == EVT_VIRTUAL_EXIT then
     if s.back then s:back() else L.pop() end
