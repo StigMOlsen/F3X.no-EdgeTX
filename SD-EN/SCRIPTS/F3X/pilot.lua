@@ -373,7 +373,7 @@ return function(L, STD)
 
   function P.overviewScreen(prof, onSaved)
     local s = { top = 1 }
-    local VIS, ROW_H, Y0 = 6, 50, 56   -- 6 rader synlige, resten rulles fram
+    local VIS, ROW_H, Y0 = 7, 44, 56   -- 7 rader synlige, resten rulles fram
 
     local function scroll(d)
       local n = #P.FUNCS
@@ -409,7 +409,7 @@ return function(L, STD)
         if pct then right = right .. "  " .. (pct > 0 and "+" or "") .. pct .. " %" end
         L.btn(list, 10, Y0 + (i - s.top) * ROW_H, 700, ROW_H - 6, f.label,
           function() L.push(P.selectScreen(prof, i, true)) end,
-          { left = true, right = right, font = MIDSIZE, textColor = on and L.C.ok or nil })
+          { left = true, right = right, font = BOLD, textColor = on and L.C.ok or nil })
       end
       -- Rullepiler og rullefelt til høyre
       local h = VIS * ROW_H - 6
