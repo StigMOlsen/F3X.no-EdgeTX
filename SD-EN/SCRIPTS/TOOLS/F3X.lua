@@ -1,18 +1,72 @@
 -- F3X (EdgeTX Lua Tool): én knapp i Tools-menyen som åpner alle RM-verktøyene.
--- Verktøyene ligger i /SCRIPTS/RM/APPS/ og kjøres herfra; når et verktøy avsluttes,
+-- Verktøyene ligger i /SCRIPTS/F3X/APPS/ og kjøres herfra; når et verktøy avsluttes,
 -- kommer man tilbake hit. Tools-siden i EdgeTX 2.12 viser bare tekst, så logoen
 -- vises i overskriften og på menyknappene her.
 local toolName = "TNS|F3X.no|TNE"
 
 -- 4. felt: sperret etter motor (flysperren, se std.lua ls.flyLock)
 local APPS = {
-  { "Flightscreen", "Timers, link and flight log", "/SCRIPTS/RM/APPS/flyskjerm.lua" },
-  { "Setup wizard", "New model or change setup", "/SCRIPTS/RM/APPS/veiviser.lua" },
-  { "Pilot setup", "Switches and controls", "/SCRIPTS/RM/APPS/pilot.lua", true },
-  { "Diagnostics", "Lua API test (empty test model)", "/SCRIPTS/RM/APPS/diag.lua" },
+  { "Flightscreen", "Timers, link and flight log", "/SCRIPTS/F3X/APPS/flyskjerm.lua" },
+  { "Setup wizard", "New model or change setup", "/SCRIPTS/F3X/APPS/veiviser.lua" },
+  { "Pilot setup", "Switches and controls", "/SCRIPTS/F3X/APPS/pilot.lua", true },
+  { "Diagnostics", "Lua API test (empty test model)", "/SCRIPTS/F3X/APPS/diag.lua" },
 }
 
-local L, err, active, LOCK_LS
+local L, err, active, LOCK_LS, OLD_RM
+
+-- Til og med v2026-11-18 lå programmet i /SCRIPTS/RM. Data (pilotprofil og fremdrift per
+-- modell) kopieres derfra til /SCRIPTS/F3X/DATA første gang, uten å overskrive noe. Etterpå
+-- skal brukeren slette /SCRIPTS/RM på SD-kortet (står i bruksanvisningen og i menyen).
+local OLD = "/SCRIPTS/RM/"
+local NEW_DATA = "/SCRIPTS/F3X/DATA/"
+
+local function exists(path)
+  local f = io.open(path, "r")
+  if f then io.close(f); return true end
+  return false
+end
+
+local function copyFile(src, dst)
+  if exists(dst) then return false end
+  local f = io.open(src, "r")
+  if not f then return false end
+  local parts = {}
+  for _ = 1, 64 do   -- datafilene er små (under 64 kB)
+    local c = io.read(f, 1024)
+    if not c or c == "" then break end
+    parts[#parts + 1] = c
+  end
+  io.close(f)
+  local o = io.open(dst, "w")
+  if not o then return false end
+  io.write(o, table.concat(parts))
+  io.close(o)
+  return true
+end
+
+local function migrateRM()
+  local old = exists(OLD .. "lib.lua") or exists(OLD .. "lib.luac") or exists(OLD .. "DATA/pilot.lua")
+  if not old then return false end
+  local names = {}
+  local ok = dir and pcall(function()
+    for n in dir(OLD .. "DATA") do
+      if string.sub(n, -4) == ".lua" or string.sub(n, -4) == ".txt" then names[#names + 1] = n end
+    end
+  end)
+  if not ok or #names == 0 then
+    -- Uten dir(): de faste filene og fremdriften for modellen som er valgt nå
+    names = { "pilot.lua", "fly.lua", "diag.lua" }
+    local info = model.getInfo()
+    local file = info and info.filename and string.gsub(info.filename, "%.yml$", "")
+    if file then names[#names + 1] = "f_" .. file .. ".lua" end
+    if info and info.name then names[#names + 1] = "m_" .. info.name .. ".lua" end
+  end
+  local n = 0
+  for _, name in ipairs(names) do
+    if copyFile(OLD .. "DATA/" .. name, NEW_DATA .. name) then n = n + 1 end
+  end
+  return true, n
+end
 
 local function start(path)
   local chunk = loadScript(path)
@@ -25,7 +79,7 @@ end
 local function menu()
   local s = {}
   function s:draw(list)
-    L.header("F3X.no", "RadioMaster tools")
+    L.header("F3X.no", OLD_RM and "Delete the folder SCRIPTS/RM on the SD card" or "RadioMaster tools")
     local step = math.min(84, math.floor(350 / #APPS))   -- plass over knapperaden nederst
     local lock = L.flyLocked(LOCK_LS)
     for i, a in ipairs(APPS) do
@@ -54,12 +108,18 @@ local function init()
             "Update the radio with EdgeTX Buddy (buddy.edgetx.org)." }
     return
   end
-  local chunk, e = loadScript("/SCRIPTS/RM/lib.lua")
-  if not chunk then err = "Missing or error in /SCRIPTS/RM/lib.lua: " .. tostring(e); return end
+  local chunk, e = loadScript("/SCRIPTS/F3X/lib.lua")
+  if not chunk then err = "Missing or error in /SCRIPTS/F3X/lib.lua: " .. tostring(e); return end
   L = chunk()
-  local sc = loadScript("/SCRIPTS/RM/std.lua")
+  local sc = loadScript("/SCRIPTS/F3X/std.lua")
   LOCK_LS = sc and sc().ls.flyLock
   L.push(menu())
+  local n
+  OLD_RM, n = migrateRM()
+  if OLD_RM then
+    L.toast((n and n > 0) and ("Data copied from SCRIPTS/RM (" .. n .. " files). Delete SCRIPTS/RM.")
+      or "Old folder SCRIPTS/RM: delete it on the SD card.", true)
+  end
 end
 
 local function run(event, touchState)

@@ -3,14 +3,14 @@
 
 local L = {}
 
-L.DATA = "/SCRIPTS/RM/DATA/"
-L.IMG = "/SCRIPTS/RM/IMG/"
+L.DATA = "/SCRIPTS/F3X/DATA/"
+L.IMG = "/SCRIPTS/F3X/IMG/"
 -- Layouten er tegnet for 800 x 480 (MK3). På mindre skjermer (TX16S MK2, 480 x 272) tegnes
 -- den samme layouten nedskalert gjennom scale.lua. All tegning går gjennom L.lcd.
 L.W, L.H = 800, 480
 local lcd = lcd
 if LCD_W and LCD_W < 800 then
-  local sc = loadScript("/SCRIPTS/RM/scale.lua")
+  local sc = loadScript("/SCRIPTS/F3X/scale.lua")
   if sc then lcd = sc()(LCD_W / 800, (LCD_H or 272) / 480) end
 end
 L.lcd = lcd
@@ -610,7 +610,7 @@ function L.toast(text, warn)
   app.msgUntil = getTime() + 300
 end
 
--- Bilder (PNG) i /SCRIPTS/RM/IMG/. Lastes én gang. Mangler filen, tegnes ingenting.
+-- Bilder (PNG) i /SCRIPTS/F3X/IMG/. Lastes én gang. Mangler filen, tegnes ingenting.
 local bmps = {}
 function L.image(name, x, y)
   local b = bmps[name]

@@ -24,8 +24,11 @@ camber, kikkflapp, aileron→sideror og aileron→flaps, med norske stemmeutrop.
 
 1. Last ned siste zip under **Releases** (til høyre på denne siden), eller hele repoet (Code → Download ZIP).
 2. Koble radioen til PC/Mac med USB og velg **USB Storage (SD)**.
-3. Har du en eldre versjon: slett `SCRIPTS/RM` og `SCRIPTS/TOOLS/F3X.lua` / `F3X.luac` først
-   (ta vare på `SCRIPTS/RM/DATA` for å beholde pilotoppsett og modeller).
+3. Har du en eldre versjon: slett `SCRIPTS/TOOLS/F3X.lua` / `F3X.luac` og alt i `SCRIPTS/F3X`
+   unntatt `DATA` (pilotoppsett og modeller) først.
+   **Fra v2026-11-18 eller eldre:** programmet lå i `SCRIPTS/RM`, nå i `SCRIPTS/F3X`. Kopier inn den
+   nye versjonen og start F3X.no én gang, så flyttes dataene fra `SCRIPTS/RM/DATA` automatisk.
+   **Slett deretter mappen `SCRIPTS/RM`.**
 4. Kopier innholdet i zip-filen (eller mappen `SD/`) til roten på SD-kortet: `SCRIPTS` og `SOUNDS`.
    NB: `SOUNDS/en/launch.wav`, `normal.wav` og `speed.wav` erstattes med norske utrop.
 5. Løs ut disken, trekk ut USB, og start **SYS → Tools → F3X.no**.

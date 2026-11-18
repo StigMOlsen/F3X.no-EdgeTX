@@ -73,7 +73,8 @@
 <h2 id="install">2. Installasjon</h2>
 <ol>
   <li>Koble radioen til PC/Mac med USB og velg <strong>USB Storage (SD)</strong>.</li>
-  <li><strong>Har du en eldre versjon:</strong> slett mappen <code>SCRIPTS/RM</code> og <code>SCRIPTS/TOOLS/F3X.lua</code> / <code>F3X.luac</code> først. Ta vare på <code>SCRIPTS/RM/DATA</code> hvis du vil beholde pilotprofil og modeller. Ellers kan radioen bruke gamle kompilerte <code>.luac</code>-filer sammen med de nye.</li>
+  <li><strong>Har du en eldre versjon:</strong> slett <code>SCRIPTS/TOOLS/F3X.lua</code> / <code>F3X.luac</code> først. Har du allerede mappen <code>SCRIPTS/F3X</code>, sletter du alt der unntatt <code>DATA</code> (pilotprofil og modeller). Ellers kan radioen bruke gamle kompilerte <code>.luac</code>-filer sammen med de nye.</li>
+  <li><strong>Oppdaterer du fra v2026-11-18 eller eldre:</strong> programmet lå før i mappen <code>SCRIPTS/RM</code> og ligger nå i <code>SCRIPTS/F3X</code>. La <code>SCRIPTS/RM</code> ligge til du har kopiert inn den nye versjonen og startet F3X.no én gang. Da kopieres pilotprofilen og modelldataene automatisk fra <code>SCRIPTS/RM/DATA</code> til <code>SCRIPTS/F3X/DATA</code>, og F3X.no ber deg slette den gamle mappen. <strong>Slett deretter hele mappen <code>SCRIPTS/RM</code> på SD-kortet.</strong></li>
   <li>Kopier mappene <code>SCRIPTS</code> og <code>SOUNDS</code> fra pakken til roten på SD-kortet (slå sammen med det som finnes). De norske stemmeutropene erstatter <code>SOUNDS/en/launch.wav</code>, <code>normal.wav</code> og <code>speed.wav</code>.</li>
   <li>Løs ut disken og trekk ut USB.</li>
   <li><kbd>SYS</kbd> → Tools → <strong>F3X.no</strong>.</li>
@@ -121,7 +122,7 @@
   <tr><td><strong>Flightscreen</strong></td><td>Skjermen under flyging: flytid, motortid, nedtelling etter motorkutt og link-kvalitet, med stemme og flylogg (under).</td></tr>
   <tr><td><strong>Oppsettveiviser</strong></td><td>Setter opp modellen steg for steg (under).</td></tr>
   <tr><td><strong>Pilotoppsett</strong></td><td>Brytere og kanaler for piloten. Gjelder alle modellene.</td></tr>
-  <tr><td><strong>Diagnose</strong></td><td>Tester radioens Lua-funksjoner. Kjør i en tom testmodell. Resultatet lagres i <code>SCRIPTS/RM/DATA/diag.lua</code>.</td></tr>
+  <tr><td><strong>Diagnose</strong></td><td>Tester radioens Lua-funksjoner. Kjør i en tom testmodell. Resultatet lagres i <code>SCRIPTS/F3X/DATA/diag.lua</code>.</td></tr>
 </table>
 
 <h3>Oppsettveiviseren</h3>
@@ -192,7 +193,7 @@
   <tr><td><strong>Slette</strong></td><td>Dobbelttrykk på en modell som <em>ikke</em> er aktiv og velg <strong>Delete model</strong>. Filen flyttes til mappen for slettede modeller på SD-kortet.</td></tr>
 </table>
 </div>
-<p><strong>Viktig:</strong> Veiviseren lagrer fremdriften og verdiene (utslag, meny 6) per <strong>modellfil</strong>, i <code>SCRIPTS/RM/DATA/f_&lt;modellfil&gt;.lua</code>. Du kan derfor gi modellen nytt navn uten å miste noe. En kopi (Duplicate model) får originalens verdier første gang veiviseren åpnes, så åpne veiviseren på kopien før du gir den nytt navn. En ny, blank modell starter alltid på nytt.</p>
+<p><strong>Viktig:</strong> Veiviseren lagrer fremdriften og verdiene (utslag, meny 6) per <strong>modellfil</strong>, i <code>SCRIPTS/F3X/DATA/f_&lt;modellfil&gt;.lua</code>. Du kan derfor gi modellen nytt navn uten å miste noe. En kopi (Duplicate model) får originalens verdier første gang veiviseren åpnes, så åpne veiviseren på kopien før du gir den nytt navn. En ny, blank modell starter alltid på nytt.</p>
 
 <h2 id="feil">6. Feilsøking</h2>
 <div class="tablewrap">

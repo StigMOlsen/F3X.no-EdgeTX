@@ -73,7 +73,8 @@
 <h2 id="install">2. Installation</h2>
 <ol>
   <li>Connect the radio to the PC/Mac with USB and select <strong>USB Storage (SD)</strong>.</li>
-  <li><strong>If you have an older version:</strong> first delete the folder <code>SCRIPTS/RM</code> and <code>SCRIPTS/TOOLS/F3X.lua</code> / <code>F3X.luac</code>. Keep <code>SCRIPTS/RM/DATA</code> if you want to keep the pilot profile and models. Otherwise the radio may use old compiled <code>.luac</code> files together with the new ones.</li>
+  <li><strong>If you have an older version:</strong> first delete <code>SCRIPTS/TOOLS/F3X.lua</code> / <code>F3X.luac</code>. If you already have the folder <code>SCRIPTS/F3X</code>, delete everything in it except <code>DATA</code> (pilot profile and models). Otherwise the radio may use old compiled <code>.luac</code> files together with the new ones.</li>
+  <li><strong>Updating from v2026-11-18 or older:</strong> the program used to be in the folder <code>SCRIPTS/RM</code> and is now in <code>SCRIPTS/F3X</code>. Leave <code>SCRIPTS/RM</code> in place until you have copied in the new version and started F3X.no once. The pilot profile and model data are then copied automatically from <code>SCRIPTS/RM/DATA</code> to <code>SCRIPTS/F3X/DATA</code>, and F3X.no asks you to delete the old folder. <strong>Then delete the whole folder <code>SCRIPTS/RM</code> on the SD card.</strong></li>
   <li>Copy the folders <code>SCRIPTS</code> and <code>SOUNDS</code> from the package to the root of the SD card (merge with what is there). The voice callouts replace <code>SOUNDS/en/launch.wav</code>, <code>normal.wav</code> and <code>speed.wav</code>.</li>
   <li>Eject the disk and unplug USB.</li>
   <li><kbd>SYS</kbd> → Tools → <strong>F3X.no</strong>.</li>
@@ -121,7 +122,7 @@
   <tr><td><strong>Flightscreen</strong></td><td>The screen while flying: flight time, motor time, countdown after motor cut and link quality, with voice and a flight log (below).</td></tr>
   <tr><td><strong>Setup wizard</strong></td><td>Sets up the model step by step (below).</td></tr>
   <tr><td><strong>Pilot setup</strong></td><td>Switches and channels for the pilot. Applies to all models.</td></tr>
-  <tr><td><strong>Diagnostics</strong></td><td>Tests the radio's Lua functions. Run it in an empty test model. The result is saved in <code>SCRIPTS/RM/DATA/diag.lua</code>.</td></tr>
+  <tr><td><strong>Diagnostics</strong></td><td>Tests the radio's Lua functions. Run it in an empty test model. The result is saved in <code>SCRIPTS/F3X/DATA/diag.lua</code>.</td></tr>
 </table>
 
 <h3>Setup wizard</h3>
@@ -192,7 +193,7 @@
   <tr><td><strong>Delete</strong></td><td>Double-tap a model that is <em>not</em> active and choose <strong>Delete model</strong>. The file is moved to the deleted-models folder on the SD card.</td></tr>
 </table>
 </div>
-<p><strong>Important:</strong> The wizard stores its progress and values (throws, menu 6) per <strong>model file</strong>, in <code>SCRIPTS/RM/DATA/f_&lt;model file&gt;.lua</code>, so you can rename a model without losing anything. A copy (Duplicate model) gets the original’s values the first time the wizard opens, so open the wizard on the copy before renaming it. A new, blank model always starts from scratch.</p>
+<p><strong>Important:</strong> The wizard stores its progress and values (throws, menu 6) per <strong>model file</strong>, in <code>SCRIPTS/F3X/DATA/f_&lt;model file&gt;.lua</code>, so you can rename a model without losing anything. A copy (Duplicate model) gets the original’s values the first time the wizard opens, so open the wizard on the copy before renaming it. A new, blank model always starts from scratch.</p>
 
 <h2 id="trouble">6. Troubleshooting</h2>
 <div class="tablewrap">

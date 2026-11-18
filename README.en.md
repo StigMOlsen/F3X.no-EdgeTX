@@ -24,8 +24,11 @@ camber, snap flap, aileron→rudder and aileron→flaps, with English voice call
 
 1. Download the **English** zip (`F3X.no-EdgeTX_SD_EN_…zip`) under **Releases** (right-hand side of this page).
 2. Connect the radio to your PC/Mac with USB and select **USB Storage (SD)**.
-3. If you have an older version: first delete `SCRIPTS/RM` and `SCRIPTS/TOOLS/F3X.lua` / `F3X.luac`
-   (keep `SCRIPTS/RM/DATA` to keep your pilot profile and models).
+3. If you have an older version: first delete `SCRIPTS/TOOLS/F3X.lua` / `F3X.luac` and everything in
+   `SCRIPTS/F3X` except `DATA` (pilot profile and models).
+   **From v2026-11-18 or older:** the program was in `SCRIPTS/RM`, now in `SCRIPTS/F3X`. Copy in the new
+   version and start F3X.no once, and the data is moved from `SCRIPTS/RM/DATA` automatically.
+   **Then delete the folder `SCRIPTS/RM`.**
 4. Copy the contents of the zip file to the root of the SD card: `SCRIPTS` and `SOUNDS`.
    Note: `SOUNDS/en/launch.wav`, `normal.wav` and `speed.wav` are replaced.
 5. Eject the disk, unplug USB and start **SYS → Tools → F3X.no**.

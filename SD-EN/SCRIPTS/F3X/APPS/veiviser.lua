@@ -1,4 +1,4 @@
--- RM Oppsettveiviser. Startes fra F3X-verktøyet (/SCRIPTS/TOOLS/F3X.lua). Selve koden ligger i /SCRIPTS/RM/.
+-- RM Oppsettveiviser. Startes fra F3X-verktøyet (/SCRIPTS/TOOLS/F3X.lua). Selve koden ligger i /SCRIPTS/F3X/.
 local toolName = "TNS|RM Setup wizard|TNE"
 
 local L
@@ -11,11 +11,11 @@ local function load(path)
 end
 
 local function init()
-  local libC, stdC, pilotC, wizC = load("/SCRIPTS/RM/lib.lua"), load("/SCRIPTS/RM/std.lua"),
-    load("/SCRIPTS/RM/pilot.lua"), load("/SCRIPTS/RM/wizard.lua")
-  local setupC, adjC = load("/SCRIPTS/RM/setup.lua"), load("/SCRIPTS/RM/adjust.lua")
-  local gfxC = load("/SCRIPTS/RM/gfx.lua")
-  local trC = loadScript("/SCRIPTS/RM/trainer.lua")   -- valgfri: uten Trener-appen på SD-kortet
+  local libC, stdC, pilotC, wizC = load("/SCRIPTS/F3X/lib.lua"), load("/SCRIPTS/F3X/std.lua"),
+    load("/SCRIPTS/F3X/pilot.lua"), load("/SCRIPTS/F3X/wizard.lua")
+  local setupC, adjC = load("/SCRIPTS/F3X/setup.lua"), load("/SCRIPTS/F3X/adjust.lua")
+  local gfxC = load("/SCRIPTS/F3X/gfx.lua")
+  local trC = loadScript("/SCRIPTS/F3X/trainer.lua")   -- valgfri: uten Trener-appen på SD-kortet
   if err then return end
   L = libC()
   local STD = stdC()

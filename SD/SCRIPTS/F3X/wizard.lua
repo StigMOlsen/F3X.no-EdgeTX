@@ -2,7 +2,7 @@
 -- steg 2 senter og steg 3 endepunkter. Steg 4, ESC, 6 og 7 ligger i adjust.lua,
 -- steg 5 (skriv oppsett) i setup.lua.
 -- Fremdrift, flykonfig og alle justerte verdier lagres per modell i
--- /SCRIPTS/RM/DATA/f_<modellfil>.lua (eldre: m_<modellnavn>.lua).
+-- /SCRIPTS/F3X/DATA/f_<modellfil>.lua (eldre: m_<modellnavn>.lua).
 
 return function(L, STD, P)
   local W = {}
@@ -24,7 +24,7 @@ return function(L, STD, P)
   end
 
   local function saveState()
-    if not L.save(L.modelKey(), st) then L.toast("Could not save progress", true) end
+    if not L.save(L.modelKey(), st) then L.toast("Kunne ikke lagre fremdrift", true) end
   end
 
   local function loadProfile()
@@ -63,7 +63,7 @@ return function(L, STD, P)
     return r
   end
 
-  local function yesno(v) return v and "Yes" or "No" end
+  local function yesno(v) return v and "Ja" or "Nei" end
 
   local MAXSRC
   local function maxSource()
@@ -104,7 +104,7 @@ return function(L, STD, P)
     local hits = G.plane(cfg, x, y, w, { color = o.color, ch = chmap, active = o.active })
     if o.caption ~= false then
       L.text(x + math.floor(w / 2), y + math.floor(w * 0.70) + 6,
-        o.caption or ((cfg.tail == "V" and "V-tail" or "Cross tail") .. " - " .. cfg.wing .. " wing servos" ..
+        o.caption or ((cfg.tail == "V" and "V-hale" or "Kryss-hale") .. " - " .. cfg.wing .. " vingeservoer" ..
           (cfg.motor and " - motor" or "")), SMLSIZE + CENTER, L.C.dim)
     end
     return hits
@@ -135,8 +135,8 @@ return function(L, STD, P)
   end
 
   local function lr(role)   -- negativ retning for rollen, etter konvensjonen
-    if role == "rud" then return "RIGHT", "LEFT" end
-    return "DOWN", "UP"
+    if role == "rud" then return "HØYRE", "VENSTRE" end
+    return "NED", "OPP"
   end
 
   ----------------------------------------------------------------------
@@ -156,8 +156,8 @@ return function(L, STD, P)
     st.planVer = nil
     local _, bad = W.S.write(W.S.plan(st.cfg, prof, st), st)
     saveState()
-    if bad == 0 then L.toast("Setup written")
-    else L.toast("Write error - run step 5", true) end
+    if bad == 0 then L.toast("Oppsettet er skrevet")
+    else L.toast("Feil ved skriving - kjør steg 5", true) end
   end
 
   -- Oppsett skrevet med en eldre versjon av skriptene, eller pilotoppsettet er endret
@@ -170,8 +170,8 @@ return function(L, STD, P)
     if st.done.mix and (st.planVer ~= STD.planVersion or changed) and not W.locked() then
       W.autoWrite()
       if st.planVer == STD.planVersion then
-        L.toast(changed and "Pilot setup changed: setup written again"
-          or "New version: setup written again")
+        L.toast(changed and "Pilotoppsettet er endret: oppsettet er skrevet på nytt"
+          or "Ny versjon: oppsettet er skrevet på nytt")
       end
     end
   end
@@ -189,7 +189,7 @@ return function(L, STD, P)
         if st.chSig and string.sub(st.chSig, 1, #sig + 1) == sig .. "," then st.chSig = sig end
         if st.chSig and st.chSig ~= sig and next(st.done) then
           st.done = {}
-          L.toast("Channels changed: run 0-5 again", true)
+          L.toast("Kanalene er endret: kjør 0-5 på nytt", true)
         end
         if st.chSig ~= sig then st.chSig = sig; saveState() end
       end
@@ -208,7 +208,7 @@ return function(L, STD, P)
 
     function s:draw(list)
       local info = model.getInfo()
-      L.header("Setup wizard", info and info.name or "")
+      L.header("Oppsettveiviser", info and info.name or "")
       local cfg = st.cfg
       local ready = cfg ~= nil and s.prof ~= nil
       local motor = cfg and cfg.motor
@@ -219,18 +219,18 @@ return function(L, STD, P)
       -- Steg som endrer oppsettet: skriv automatisk når du kommer tilbake hit
       local function pushW(f) return function() s.autoWrite = true; local x = f(); x.danger = true; L.push(x) end end
       local rows = {
-        { "0   Model config", cfg and "" or "not set", pushW(W.configScreen), s.prof ~= nil },
-        { "1   Servo direction", d.dir and "done" or "-", pushW(W.dirScreen), ready },
-        { "2   Center (PPM center)", d.center and "done" or "-", pushW(W.centerScreen), ready and d.dir },
-        { "3   Endpoints", d.limits and "done" or "-", pushW(W.limitScreen), ready and d.center },
-        { "4   Throws / rates", d.rates and "done" or (d.limits and "-" or "do 3 first"), push(W.A.ratesScreen),
+        { "0   Modell Config", cfg and "" or "ikke satt", pushW(W.configScreen), s.prof ~= nil },
+        { "1   Servoretning", d.dir and "ferdig" or "-", pushW(W.dirScreen), ready },
+        { "2   Senter (PPM-senter)", d.center and "ferdig" or "-", pushW(W.centerScreen), ready and d.dir },
+        { "3   Endepunkter", d.limits and "ferdig" or "-", pushW(W.limitScreen), ready and d.center },
+        { "4   Utslag / rates", d.rates and "ferdig" or (d.limits and "-" or "gjør 3 først"), push(W.A.ratesScreen),
           ready },
-        { "E   ESC calibration", motor and (d.esc and "done" or "-") or "no motor", pushW(W.A.escScreen),
+        { "E   ESC-kalibrering", motor and (d.esc and "ferdig" or "-") or "ingen motor", pushW(W.A.escScreen),
           ready and motor },
-        { "5   Write setup", d.mix and "written" or "-", push(W.S.writeScreen), ready },
-        { "6   Adjust", d.mix and "" or "after 5", push(W.A.menuScreen, true), ready and d.mix, true },
-        { "7   Failsafe", (st.check and st.check.failsafe) and "tested" or "-", push(W.A.failsafeScreen), ready and d.mix },
-        { "8   Checklist", ready and (W.A.checkDone(st) .. " / " .. #W.A.CHECKS) or "", push(W.A.checkScreen), ready },
+        { "5   Skriv oppsett", d.mix and "skrevet" or "-", push(W.S.writeScreen), ready },
+        { "6   Justering", d.mix and "" or "etter 5", push(W.A.menuScreen, true), ready and d.mix, true },
+        { "7   Failsafe", (st.check and st.check.failsafe) and "testet" or "-", push(W.A.failsafeScreen), ready and d.mix },
+        { "8   Sjekkliste", ready and (W.A.checkDone(st) .. " / " .. #W.A.CHECKS) or "", push(W.A.checkScreen), ready },
       }
       local colW = math.floor((L.W - 50) / 2)
       for i, r in ipairs(rows) do
@@ -241,27 +241,27 @@ return function(L, STD, P)
       -- Slik justeres verdiene (steg 2, 3, 4 og meny 6)
       if lock then
         L.text(20, 366, L.LOCK_TEXT, SMLSIZE, L.C.warn)
-        L.text(20, 388, "Only 6 Adjust is open (what is safe in the air).", SMLSIZE, L.C.dim)
+        L.text(20, 388, "Bare 6 Justering er åpen (det som er trygt i lufta).", SMLSIZE, L.C.dim)
       elseif s.prof then
-        L.text(20, 366, "Adjusting: S1 = coarse, S2 = fine. Center both before each surface.",
+        L.text(20, 366, "Justering: S1 = grov, S2 = fin justering. Sett begge i midten før hvert ror.",
           SMLSIZE, L.C.text)
-        L.text(20, 388, "PAGE>/< or keys 1-6 skip without saving. Only Save/Confirm saves.", SMLSIZE, L.C.dim)
+        L.text(20, 388, "PAGE>/< eller knapp 1-6 hopper uten å lagre. Bare Lagre/Bekreft lagrer.", SMLSIZE, L.C.dim)
       end
       if not s.prof then
-        L.text(20, 340, "Save the pilot setup first (F3X.no -> Pilot setup).", SMLSIZE, L.C.dim)
+        L.text(20, 340, "Lagre pilotoppsettet først (F3X.no -> Pilotoppsett).", SMLSIZE, L.C.dim)
       elseif not cfg then
-        L.text(20, 340, "Set the model config (0) before the other steps.", SMLSIZE, L.C.dim)
+        L.text(20, 340, "Sett flykonfigurasjonen (0) før de andre stegene.", SMLSIZE, L.C.dim)
       elseif not d.mix then
-        L.text(20, 340, "Run 1-4 and write the setup (5). Then adjust in 6.", SMLSIZE, L.C.dim)
+        L.text(20, 340, "Kjør 1-4 og skriv oppsettet (5). Juster deretter i 6.", SMLSIZE, L.C.dim)
       else
-        L.text(20, 340, "Changed something in 0 or 4? Write the setup (5) again.", SMLSIZE, L.C.dim)
+        L.text(20, 340, "Endret noe i 0 eller 4? Skriv oppsettet (5) på nytt.", SMLSIZE, L.C.dim)
       end
-      L.btn(list, 20, 418, 220, 54, "Exit", function() L.quit() end)
+      L.btn(list, 20, 418, 220, 54, "Avslutt", function() L.quit() end)
       if not s.focusSet then
         s.focusSet = true
         s.focus = 1
         for i, r in ipairs(rows) do
-          if r[4] and (r[2] == "-" or r[2] == "not set") then s.focus = i; break end
+          if r[4] and (r[2] == "-" or r[2] == "ikke satt") then s.focus = i; break end
         end
       end
     end
@@ -273,17 +273,17 @@ return function(L, STD, P)
   -- Steg 0: flykonfigurasjon
 
   local CFG_OPTS = {
-    { key = "wing", label = "Wing servos", values = { 2, 4 }, text = function(v)
+    { key = "wing", label = "Vingeservoer", values = { 2, 4 }, text = function(v)
       return v == 2 and "2 (ail)" or "4 (ail + flap)" end },
-    { key = "tail", label = "Tail", values = { "X", "V" }, text = function(v)
-      return v == "V" and "V-tail" or "Cross" end },
+    { key = "tail", label = "Hale", values = { "X", "V" }, text = function(v)
+      return v == "V" and "V-hale" or "Kryss" end },
     { key = "motor", label = "Motor", values = { true, false }, text = yesno },
     { key = "thermal", label = "Thermal (FM4)", values = { true, false }, text = yesno },
     { key = "speed", label = "Speed (FM3)", values = { true, false }, text = yesno },
     { key = "launch", label = "Launch (FM2)", values = { true, false }, text = yesno },
     { key = "landing", label = "Landing (FM1)", values = { true, false }, text = yesno },
     { key = "camberMode", label = "Camber", values = { "split", "full" }, text = function(v)
-      return v == "full" and "Full range" or "Per FM" end },
+      return v == "full" and "Hele området" or "Per FM" end },
   }
 
   function W.configScreen()
@@ -311,22 +311,22 @@ return function(L, STD, P)
       for _, c in ipairs(W.channels(s.cfg, true)) do
         L.setOutput(c.ch - 1, { name = c.name })
       end
-      L.toast("Model config saved")
+      L.toast("Flykonfigurasjon lagret")
       L.pop()
     end
 
     function s:draw(list)
-      L.header("0 - Model config")
+      L.header("0 - Flykonfigurasjon")
       for i, o in ipairs(CFG_OPTS) do
         -- 40 px per rad: luft mellom nederste rad og knapperaden, så de er lette å treffe
         L.btn(list, 20, 56 + (i - 1) * 40, 470, 36, o.label, function() cycle(o) end,
           { left = true, right = o.text(s.cfg[o.key]) })
       end
       W.plane(s.cfg, { x = 505, y = 70, w = 285 })
-      L.text(505, 310, "Tap a row to change it.", SMLSIZE, L.C.dim)
+      L.text(505, 310, "Trykk på en rad for å endre.", SMLSIZE, L.C.dim)
       L.btnRow(list, {
-        { "Cancel", function() L.pop() end },
-        { "Save", store },
+        { "Avbryt", function() L.pop() end },
+        { "Lagre", store },
       })
     end
 
@@ -400,48 +400,48 @@ return function(L, STD, P)
       local out = model.getOutput(c.ch - 1)
       local r = (out and out.revert == 1) and 0 or 1
       L.setOutput(c.ch - 1, { revert = r })
-      s.state[c.ch] = r == 1 and "reversed" or "normal"
+      s.state[c.ch] = r == 1 and "reversert" or "normal"
     end
 
     function s:draw(list)
       local G = W.G
-      L.header("1 - Servo direction", s.i .. " of " .. #s.chs)
+      L.header("1 - Servoretning", s.i .. " av " .. #s.chs)
       local c = s.chs[s.i]
       local neg = lr(c and c.role)
       local hits = W.plane(st.cfg, { active = c.role,
         color = W.roleColors(s.chs, function(k) return k < s.i end, c.role) })
       local _, h = L.fit(430, 56, "CH" .. c.ch .. "  " .. c.name, 360, { DBLSIZE, MIDSIZE })
-      L.text(430, 56 + h + 4, "Surface moves " .. neg .. "?", MIDSIZE, L.C.act)
+      L.text(430, 56 + h + 4, "Går roret " .. neg .. "?", MIDSIZE, L.C.act)
       G.profile(440, 215, 250, W.outV(c.ch), { arrow = 1 })
-      L.shNote(s.test.label, "all surfaces " .. -V.dirTest .. " % (down)")
-      L.text(430, 268, "Dashed = neutral. Arrow = correct direction.", SMLSIZE, L.C.dim)
+      L.shNote(s.test.label, "alle ror " .. -V.dirTest .. " % (ned)")
+      L.text(430, 268, "Stiplet = nøytral. Pilen = riktig retning.", SMLSIZE, L.C.dim)
       local out = model.getOutput(c.ch - 1)
       local rev = out and out.revert == 1
-      L.text(430, 325, "Direction: " .. (rev and "reversed" or "normal") .. (s.state[c.ch] and "  (changed)" or ""),
+      L.text(430, 325, "Retning: " .. (rev and "reversert" or "normal") .. (s.state[c.ch] and "  (endret)" or ""),
         0, rev and L.C.act or L.C.text)
       if s.full then
-        L.text(12, 385, "Mix limit (64) reached: some surfaces get no test mix!", SMLSIZE, L.C.warn)
+        L.text(12, 385, "Mikstaket (64) er nådd: noen ror får ikke testmix!", SMLSIZE, L.C.warn)
       else
-        L.text(12, 385, s.quick and "Tap the control surface you want to change." or "Tap a surface to select it.",
+        L.text(12, 385, s.quick and "Trykk på roret du vil endre." or "Trykk på et ror for å velge det.",
           SMLSIZE, L.C.dim)
       end
       local function done()
         st.done.dir = true
         saveState()
-        L.toast("Servo direction done")
+        L.toast("Servoretning ferdig")
         L.pop()
       end
-      local items = { { "Cancel", function() L.pop() end } }
+      local items = { { "Avbryt", function() L.pop() end } }
       if not s.quick then
-        items[#items + 1] = { "Back", function() if s.i > 1 then s.i = s.i - 1 end end, { enabled = s.i > 1 } }
+        items[#items + 1] = { "Tilbake", function() if s.i > 1 then s.i = s.i - 1 end end, { enabled = s.i > 1 } }
       end
-      items[#items + 1] = { "Reverse", function() reverse(c) end }
+      items[#items + 1] = { "Reverser", function() reverse(c) end }
       if not s.quick or s.i < #s.chs then
-        items[#items + 1] = { "Yes, " .. neg .. " - OK", function()
+        items[#items + 1] = { "Ja, " .. neg .. " - OK", function()
           if s.i < #s.chs then s.i = s.i + 1 else done() end
         end, { color = L.C.green, primary = not s.quick } }
       end
-      if s.quick then items[#items + 1] = { "Save & write", done } end
+      if s.quick then items[#items + 1] = { "Lagre og skriv", done } end
       L.btnRow(list, items)
       W.planeHits(list, hits, function(role)
         for k, x in ipairs(s.chs) do if x.role == role then s.i = k end end
@@ -513,14 +513,14 @@ return function(L, STD, P)
   -- uten å bla gjennom resten. Rullehjulet starter på Lagre og skriv (L.run: primary).
   -- alwaysPrev: Tilbake også når steget er gjort før (steg 3)
   function W.saveItems(quick, cancel, prev, hasPrev, extra, nextLabel, confirm, alwaysPrev)
-    local items = { { "Cancel", cancel } }
-    if not quick or alwaysPrev then items[#items + 1] = { "Back", prev, { enabled = hasPrev } } end
+    local items = { { "Avbryt", cancel } }
+    if not quick or alwaysPrev then items[#items + 1] = { "Tilbake", prev, { enabled = hasPrev } } end
     items[#items + 1] = extra
     if nextLabel then
       items[#items + 1] = { nextLabel, function() confirm() end, { primary = not quick } }
     end
-    if quick then items[#items + 1] = { "Save & write", function() confirm(true) end }
-    elseif not nextLabel then items[#items + 1] = { "Save - done", function() confirm() end } end
+    if quick then items[#items + 1] = { "Lagre og skriv", function() confirm(true) end }
+    elseif not nextLabel then items[#items + 1] = { "Lagre - ferdig", function() confirm() end } end
     return items
   end
 
@@ -629,7 +629,7 @@ return function(L, STD, P)
       else
         st.done.center = true
         saveState()
-        L.toast("Center done")
+        L.toast("Senter ferdig")
         L.pop()
       end
     end
@@ -644,14 +644,14 @@ return function(L, STD, P)
     function s:draw(list)
       local G = W.G
       local c = s.chs[s.i]
-      L.header("2 - Center (neutral)", "CH" .. c.ch .. " - " .. s.i .. " of " .. #s.chs)
+      L.header("2 - Senter (nøytral)", "CH" .. c.ch .. " - " .. s.i .. " av " .. #s.chs)
       local hits = W.plane(st.cfg, { active = c.role,
         color = W.roleColors(s.chs, function(k) return k < s.i end, c.role) })
       local M = s.max
       if s.flap then
-        title(c.name, "FLUSH")
-        L.text(430, 106, "Set the flap flush: " .. L.dualLabel(s.dual) .. ".", SMLSIZE, L.C.dim)
-        L.text(430, 126, "Subtrim, above 100 % also PPM center.", SMLSIZE, L.C.dim)
+        title(c.name, "I FLUKT")
+        L.text(430, 106, "Still flappen i flukt: " .. L.dualLabel(s.dual) .. ".", SMLSIZE, L.C.dim)
+        L.text(430, 126, "Subtrim, over 100 % også PPM-senter.", SMLSIZE, L.C.dim)
         -- Anslag: servosenter = flapZeroDeg ned, subtrim opp løfter flappen
         G.profile(440, 172, 220, flapDeg(s.c) - V.flapZeroDeg, { deg = 1, neutralColor = G.C.ok })
         L.text(430, 238, (s.c >= 0 and "+" or "") .. s.c .. " %", DBLSIZE)
@@ -661,15 +661,15 @@ return function(L, STD, P)
         -- Strekene ved ±100 % viser hvor subtrim er full og PPM-senter tar over
         G.bar(440, 302, 340, 10, s.c, -M, M, { dot = G.C.act, labels = true,
           marks = { { 0, G.C.white }, { -100, G.C.edge }, { 100, G.C.edge } } })
-        L.mixWarn(s.tmpOk, s.held, 430, 340, "Green dashed = flush with the airfoil")
+        L.mixWarn(s.tmpOk, s.held, 430, 340, "Grønn stiplet = i flukt med profilen")
         if math.abs(s.c) >= M then
-          L.text(430, 362, "Max. Move the servo arm one spline.", SMLSIZE, L.C.warn)
+          L.text(430, 362, "Maks. Flytt servoarmen ett hakk.", SMLSIZE, L.C.warn)
         elseif math.abs(s.c) > 100 then
-          L.text(430, 362, "Above 100 %: the rest is PPM center.", SMLSIZE, L.C.dim)
+          L.text(430, 362, "Over 100 %: resten er PPM-senter.", SMLSIZE, L.C.dim)
         end
       else
-        title(c.name, "CENTER")
-        L.text(430, 106, "Set the surface neutral: " .. L.dualLabel(s.dual) .. ".", SMLSIZE, L.C.dim)
+        title(c.name, "SENTER")
+        L.text(430, 106, "Still roret nøytralt: " .. L.dualLabel(s.dual) .. ".", SMLSIZE, L.C.dim)
         -- Forsterket visning: 100 us vises som 25 % utslag. PPM-senter kommer etter reversering.
         G.profile(440, 172, 220, (s.rev and -1 or 1) * s.c / 400, { neutralColor = G.C.ok })
         L.text(430, 238, (s.c >= 0 and "+" or "") .. s.c .. " us", DBLSIZE)
@@ -677,20 +677,20 @@ return function(L, STD, P)
         local Wn = V.centerWarn
         G.bar(440, 302, 340, 10, s.c, -M, M, { dot = G.C.act, labels = true, marks = { { 0, G.C.white } },
           zones = { { -M, -Wn, G.C.yellow }, { Wn, M, G.C.yellow }, { -M, -M * 0.9, G.C.red }, { M * 0.9, M, G.C.red } } })
-        L.mixWarn(s.tmpOk, s.held, 430, 340, "Green dashed = flush with the airfoil")
+        L.mixWarn(s.tmpOk, s.held, 430, 340, "Grønn stiplet = i flukt med profilen")
         if math.abs(s.c) >= M then
-          L.text(430, 362, "Max " .. M .. " us. Adjust linkage/servo arm.", SMLSIZE, L.C.warn)
+          L.text(430, 362, "Maks " .. M .. " us. Juster stag/servoarm.", SMLSIZE, L.C.warn)
         elseif math.abs(s.c) > Wn then
-          L.text(430, 362, "Above " .. Wn .. " us: adjust linkage/servo arm.", SMLSIZE, L.C.warn)
+          L.text(430, 362, "Over " .. Wn .. " us: juster stag/servoarm.", SMLSIZE, L.C.warn)
         end
       end
       L.dualHint(s.dual, 12, 385)
       L.dualWait(s.dual, 430, 362)
-      L.text(12, 362, "PAGE>/< or 1-6: skip without saving", SMLSIZE, L.C.dim)
+      L.text(12, 362, "PAGE>/< eller 1-6: hopp uten å lagre", SMLSIZE, L.C.dim)
       local more = s.i < #s.chs
       L.btnRow(list, W.saveItems(s.quick, cancel, function() go(s.i - 1) end, s.i > 1,
-        { "Reset pot", function() s.c0 = s.c; L.dualStart(s.dual, true) end },
-        more and ("Save -> CH" .. s.chs[s.i + 1].ch), confirm))
+        { "Nullstill pot", function() s.c0 = s.c; L.dualStart(s.dual, true) end },
+        more and ("Lagre -> CH" .. s.chs[s.i + 1].ch), confirm))
       W.planeHits(list, hits, function(role)
         for k, x in ipairs(s.chs) do
           if x.role == role and k ~= s.i then go(k) return end
@@ -835,7 +835,7 @@ return function(L, STD, P)
       else
         st.done.limits = true
         saveState()
-        L.toast("Endpoints done")
+        L.toast("Endepunkter ferdig")
         L.pop()
       end
     end
@@ -853,10 +853,10 @@ return function(L, STD, P)
       local e = s.entries[s.k]
       local neg, pos = lr(e.ch.role)
       local sideName = e.side < 0 and neg or pos
-      L.header("3 - Endpoints", "CH" .. e.ch.ch .. " " .. sideName .. " - " .. s.k .. " of " .. #s.entries)
+      L.header("3 - Endepunkter", "CH" .. e.ch.ch .. " " .. sideName .. " - " .. s.k .. " av " .. #s.entries)
       local hits = W.plane(st.cfg, { active = e.ch.role,
         color = W.roleColors(s.chs, function(k) return 2 * k < s.k end, e.ch.role) })
-      if s.shLabel or s.shBlocked then L.shNote(s.shLabel or s.shBlocked, "all surfaces neutral", not s.shLabel) end
+      if s.shLabel or s.shBlocked then L.shNote(s.shLabel or s.shBlocked, "alle ror i nøytral", not s.shLabel) end
       title(e.ch.name, sideName)
       L.text(430, 106, "CH" .. e.ch.ch .. " - " .. s.field .. "-limit" ..
         (math.abs(s.L) > 100 and " - Extended limits" or ""), SMLSIZE, L.C.dim)
@@ -864,8 +864,8 @@ return function(L, STD, P)
       local room = e.side < 0 and lo or hi
       if s.flap then
         local goal = e.side < 0 and -V.flapDownDeg or V.flapUpDeg
-        L.text(430, 126, "Target: approx. " .. math.abs(goal) .. " degrees " .. string.lower(sideName) ..
-          (e.side < 0 and ", mechanical stop" or ""), SMLSIZE, L.C.dim)
+        L.text(430, 126, "Mål: ca. " .. math.abs(goal) .. " grader " .. string.lower(sideName) ..
+          (e.side < 0 and ", stopp mekanisk" or ""), SMLSIZE, L.C.dim)
         G.profile(440, 172, 220, flapDeg(s.L - s.ofs), { deg = 1, limit = flapDeg(room - s.ofs), target = goal })
       else
         G.profile(440, 172, 220, s.L / 100, { limit = room / 100 })
@@ -873,7 +873,7 @@ return function(L, STD, P)
       local us = L.round(1500 + s.ppmC + s.L * 5.12)
       L.text(430, 238, s.L .. " %", DBLSIZE)
       if s.flap then
-        L.text(790, 240, "approx. " .. math.abs(L.round(flapDeg(s.L - s.ofs))) .. " degrees", MIDSIZE + RIGHT)
+        L.text(790, 240, "ca. " .. math.abs(L.round(flapDeg(s.L - s.ofs))) .. " grader", MIDSIZE + RIGHT)
         L.text(790, 276, us .. " us", SMLSIZE + RIGHT, L.C.dim)
       else
         L.text(790, 246, us .. " us", MIDSIZE + RIGHT)
@@ -881,19 +881,19 @@ return function(L, STD, P)
       local marks = { { -100, G.C.edge }, { 100, G.C.edge }, { 0, G.C.white }, { room, G.C.ok } }
       if s.flap then marks[#marks + 1] = { s.ofs, G.C.act } end
       G.bar(440, 302, 340, 10, s.L, -150, 150, { labels = true, marks = marks })
-      L.mixWarn(s.tmpOk, s.held, 430, 340, s.flap and "Green = max room. White = target. Orange = neutral."
-        or "Green dashed = max room")
+      L.mixWarn(s.tmpOk, s.held, 430, 340, s.flap and "Grønn = maks plass. Hvit = mål. Oransje = nøytral."
+        or "Grønn stiplet = maks plass")
       if s.atMax then
-        L.text(430, 362, "No room left (max signal).", SMLSIZE, L.C.warn)
+        L.text(430, 362, "Ingen plass igjen (maks signal).", SMLSIZE, L.C.warn)
       elseif math.abs(s.L) > 100 then
-        L.text(430, 362, "Above 100 %: turn on Extended limits.", SMLSIZE, L.C.warn)
+        L.text(430, 362, "Over 100 %: slå på Extended limits.", SMLSIZE, L.C.warn)
       end
       L.dualHint(s.dual, 12, 385)
       L.dualWait(s.dual, 430, 362)
-      L.text(12, 362, "PAGE>/< or 1-6: skip without saving", SMLSIZE, L.C.dim)
+      L.text(12, 362, "PAGE>/< eller 1-6: hopp uten å lagre", SMLSIZE, L.C.dim)
       L.btnRow(list, W.saveItems(s.quick, cancel, function() go(s.k - 1) end, s.k > 1,
-        { "Reset pot", function() s.L0 = s.L; L.dualStart(s.dual, true) end },
-        s.k < #s.entries and "Save -> next", confirm, true))
+        { "Nullstill pot", function() s.L0 = s.L; L.dualStart(s.dual, true) end },
+        s.k < #s.entries and "Lagre -> neste", confirm, true))
       W.planeHits(list, hits, function(role)
         for k, x in ipairs(s.entries) do
           if x.ch.role == role and x.side == -1 and k ~= s.k then go(k) return end

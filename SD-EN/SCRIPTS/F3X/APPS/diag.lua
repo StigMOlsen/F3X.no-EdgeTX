@@ -1,6 +1,6 @@
-local toolName = "TNS|RM Diagnose|TNE"
+local toolName = "TNS|RM Diagnostics|TNE"
 -- RM Diagnose, startes fra F3X-verktøyet: prøver ut de delene av Lua-API-et som veiviseren
--- bygger på, og skriver svarene til /SCRIPTS/RM/DATA/diag.lua.
+-- bygger på, og skriver svarene til /SCRIPTS/F3X/DATA/diag.lua.
 -- Kjør i en TOM testmodell. Bruker CH32, kurve 32, L64 og spesialfunksjon 64, og rydder etter seg.
 
 local R = { tests = {} }
@@ -53,7 +53,7 @@ end
 local function mix(m)
   clearCh()
   local ok, e = pcall(model.insertMix, CH, 0, m)
-  if not ok then note("insertMix-feil", e) end
+  if not ok then note("insertMix error", e) end
 end
 
 local function collect()
@@ -111,13 +111,13 @@ local function init()
   test("fm_bit_other", function() mix({ name = "RMdg", source = MAX, weight = 50, flightModes = 2 ^ ((fm + 1) % 9) }) end)
   test("curve_std_ret", function()
     local ok, r = pcall(model.setCurve, CURVE, { name = "DG", type = 0, y = { -100, 0, 50 }, smooth = 0 })
-    note("curve_std_ret", ok and tostring(r) or ("feil: " .. tostring(r)))
+    note("curve_std_ret", ok and tostring(r) or ("error: " .. tostring(r)))
   end, function() end)
   test("curve_val32_1based", function() mix({ name = "RMdg", source = MAX, weight = 100, curveType = 3, curveValue = CURVE + 1 }) end)
   test("curve_val31_0based", function() mix({ name = "RMdg", source = MAX, weight = 100, curveType = 3, curveValue = CURVE }) end)
   test("curve_custom_ret", function()
     local ok, r = pcall(model.setCurve, CURVE, { name = "DG", type = 1, x = { -100, 50, 100 }, y = { 0, 20, 40 }, smooth = 0 })
-    note("curve_custom_ret", ok and tostring(r) or ("feil: " .. tostring(r)))
+    note("curve_custom_ret", ok and tostring(r) or ("error: " .. tostring(r)))
   end, function() if model.getCurve then R.curveCustom = model.getCurve(CURVE) end end)
   test("curve_custom_at_max", function() mix({ name = "RMdg", source = MAX, weight = 100, curveType = 3, curveValue = CURVE + 1 }) end)
   test("func1_xpos", function() mix({ name = "RMdg", source = MAX, weight = 100, curveType = 2, curveValue = 1 }) end)
@@ -184,13 +184,13 @@ local function cleanup()
     pcall(model.setCustomFunction, SFI, { switch = 0, func = 0, value = 0, mode = 0, param = 0, active = 0 })
   end
   if model.setGlobalVariable then pcall(model.setGlobalVariable, 0, R.currentFM or 0, 0) end
-  local f = io.open("/SCRIPTS/RM/DATA/diag.lua", "w")
+  local f = io.open("/SCRIPTS/F3X/DATA/diag.lua", "w")
   if f then
     io.write(f, "return " .. ser(R) .. "\n")
     io.close(f)
-    shown[#shown + 1] = "Skrevet: /SCRIPTS/RM/DATA/diag.lua"
+    shown[#shown + 1] = "Written: /SCRIPTS/F3X/DATA/diag.lua"
   else
-    shown[#shown + 1] = "! Kunne ikke skrive diag.lua (finnes DATA-mappen?)"
+    shown[#shown + 1] = "! Could not write diag.lua (does the DATA folder exist?)"
   end
 end
 
@@ -204,16 +204,16 @@ local function run(event)
     elseif not q.started then
       q.started = true
       local ok, e = pcall(q.setup)
-      if not ok then note(q.name, "feil: " .. tostring(e)) end
+      if not ok then note(q.name, "error: " .. tostring(e)) end
       waitUntil = now + 40
     elseif now >= waitUntil then
       local ok, e = pcall(q.measure)
-      if not ok then note(q.name, "feil: " .. tostring(e)) end
+      if not ok then note(q.name, "error: " .. tostring(e)) end
       qi = qi + 1
     end
   end
   lcd.clear()
-  lcd.drawText(10, 8, "RM Diagnose " .. (done and "- ferdig" or ("- test " .. qi .. " / " .. #queue)), MIDSIZE)
+  lcd.drawText(10, 8, "RM Diagnostics " .. (done and "- done" or ("- test " .. qi .. " / " .. #queue)), MIDSIZE)
   -- Linjer etter skjermhøyden (800 x 480 på MK3, 480 x 272 på MK2)
   local H = LCD_H or 480
   local rowH = H >= 480 and 26 or 16
@@ -222,7 +222,7 @@ local function run(event)
   for i = first, #shown do
     lcd.drawText(10, top + (i - first) * rowH, shown[i], SMLSIZE)
   end
-  if done then lcd.drawText(10, H - 25, "Ferdig. Trykk RTN.", SMLSIZE) end
+  if done then lcd.drawText(10, H - 25, "Done. Press RTN.", SMLSIZE) end
   if event == EVT_VIRTUAL_EXIT then
     if not done then cleanup() end
     return 1

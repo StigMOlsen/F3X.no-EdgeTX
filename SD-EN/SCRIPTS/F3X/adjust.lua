@@ -157,7 +157,7 @@ return function(L, STD, W, S)
       else
         if def.done then def.done(s.st, s.prof) end
         W.saveState()
-        L.toast((def.doneText or "Lagret"))
+        L.toast((def.doneText or "Saved"))
         L.pop()
       end
     end
@@ -184,8 +184,8 @@ return function(L, STD, W, S)
       local G = W.G
       if #s.entries == 0 then
         L.header(def.title)
-        L.text(20, 70, def.empty or "Ingenting å justere for denne modellen.")
-        local items = { { "Tilbake", function() L.pop() end } }
+        L.text(20, 70, def.empty or "Nothing to adjust for this model.")
+        local items = { { "Back", function() L.pop() end } }
         if def.toggle and def.toggle.show(s.st, s.prof) then
           items[#items + 1] = { def.toggle.label(), function() def.toggle.fn(); reload() end }
         end
@@ -193,7 +193,7 @@ return function(L, STD, W, S)
         return
       end
       local e = cur()
-      L.header(def.title, def.select and "" or (s.k .. " av " .. #s.entries))
+      L.header(def.title, def.select and "" or (s.k .. " of " .. #s.entries))
       -- Flyfiguren: rorene som justeres er oransje
       local roles = e.roles or {}
       local col = {}
@@ -212,7 +212,7 @@ return function(L, STD, W, S)
         y = y + 34
       end
       if e.fm and e.skipFM and e.skipFM[s.fm] then
-        L.text(430, y, "Brukes ikke i " .. fmName(s.fm) .. ". Bytt flymodus.", SMLSIZE, L.C.warn)
+        L.text(430, y, "Not used in " .. fmName(s.fm) .. ". Change flight mode.", SMLSIZE, L.C.warn)
         y = y + 22
       end
       for _, h in ipairs(type(e.hint) == "table" and e.hint or { e.hint }) do
@@ -233,14 +233,14 @@ return function(L, STD, W, S)
       if def.info then def.info(s, e, 430, y) end
       L.dualHint(s.dual, 12, 385)
       L.dualWait(s.dual, 430, 362)
-      if s.shLabel or s.shBlocked then L.shNote(s.shLabel or s.shBlocked, "alle ror i senter", not s.shLabel) end
+      if s.shLabel or s.shBlocked then L.shNote(s.shLabel or s.shBlocked, "all surfaces centered", not s.shLabel) end
       local quick = s.quick and not def.select and #s.entries > 1
-      local items = { { "Avbryt", cancel } }
+      local items = { { "Cancel", cancel } }
       if not quick then
-        items[#items + 1] = { "Tilbake", function() commit(); s.k = s.k - 1; setup() end,
+        items[#items + 1] = { "Back", function() commit(); s.k = s.k - 1; setup() end,
           { enabled = s.k > 1 and not def.select } }
       end
-      items[#items + 1] = { "Nullstill pot", function() s.base = s.val; L.dualStart(s.dual, true) end }
+      items[#items + 1] = { "Reset pot", function() s.base = s.val; L.dualStart(s.dual, true) end }
       -- Underskjerm (f.eks. Kalibrer i steg 4): denne skjermen rydder testmiksene først
       if def.extra and def.extra.show(s.st) then
         items[#items + 1] = { def.extra.label, function()
@@ -255,21 +255,21 @@ return function(L, STD, W, S)
         items[#items + 1] = { def.toggle.label(), function() def.toggle.fn(); reload() end, { primary = false } }
       end
       if e.fm then
-        items[#items + 1] = { "Kopier alle FM", function()
+        items[#items + 1] = { "Copy to all FM", function()
           commit()
           for _, fm in ipairs(S.usedFMs(s.st.cfg, s.prof)) do
             if not (e.skipFM and e.skipFM[fm]) then e.set(fm, s.val) end
           end
           W.saveState()
-          L.toast("Kopiert til alle flymoduser")
+          L.toast("Copied to all flight modes")
         end }
       end
       local last = def.select or s.k == #s.entries
       if quick then
-        if not last then items[#items + 1] = { "Bekreft", function() confirm() end, { primary = false } } end
-        items[#items + 1] = { def.quickLabel or "Ferdig", function() confirm(true) end }
+        if not last then items[#items + 1] = { "Confirm", function() confirm() end, { primary = false } } end
+        items[#items + 1] = { def.quickLabel or "Done", function() confirm(true) end }
       else
-        items[#items + 1] = { last and "Ferdig" or "Bekreft", function() confirm() end }
+        items[#items + 1] = { last and "Done" or "Confirm", function() confirm() end }
       end
       L.btnRow(list, items)
       -- Velgerknapper under flyfiguren (e.pick): én per verdi, valgt er oransje
@@ -300,7 +300,7 @@ return function(L, STD, W, S)
   end
 
   local function updown(v)
-    if v < 0 then return v .. " % (ned)" elseif v > 0 then return "+" .. v .. " % (opp)" end
+    if v < 0 then return v .. " % (down)" elseif v > 0 then return "+" .. v .. " % (up)" end
     return "0 %"
   end
 
@@ -311,7 +311,7 @@ return function(L, STD, W, S)
     local MAX = L.findSource({ "max", "MAX" })
     local chans = {}
     local function clearAll() for ch in pairs(chans) do L.tmpClear(ch) end end
-    local def = { title = "4 - Utslag", doneText = "Utslag lagret", quickLabel = "Lagre og skriv" }
+    local def = { title = "4 - Throws", doneText = "Throws saved", quickLabel = "Save & write" }
     function def.quick(st) return st.done.rates end
 
     function def.entries(st)
@@ -324,7 +324,7 @@ return function(L, STD, W, S)
         end
         list[#list + 1] = {
           label = r.label, min = 0, max = 100, span = 50, roles = { r.role },
-          hint = { "Roret står som ved " .. r.stick .. " fullt ut.", "Juster utslaget med potten. 100 % = endepunktet." },
+          hint = { "Surface is shown as at " .. r.stick .. " full.", "Adjust the throw with the pot. 100 % = endpoint." },
           get = function() return S.rate(st, r.role, r.f, r.sd) end,
           set = function(_, v) st.rates[r.key] = v; show(v) end,
           prep = function() clearAll(); show(S.rate(st, r.role, r.f, r.sd)) end,
@@ -334,7 +334,7 @@ return function(L, STD, W, S)
     end
 
     def.leave = clearAll
-    def.extra = { label = "Kalibrer", screen = function() return A.calScreen() end,
+    def.extra = { label = "Calibrate", screen = function() return A.calScreen() end,
       show = function(st) return #S.calPairs(st.cfg) > 0 end }
 
     function def.done(st, prof)
@@ -355,7 +355,7 @@ return function(L, STD, W, S)
   function A.calScreen()
     local MAXS = L.findSource({ "max", "MAX" })
     local shown = {}
-    local def = { title = "Kalibrer høyre side", doneText = "Kalibrering lagret", tmpNeed = 2 }
+    local def = { title = "Calibrate right side", doneText = "Calibration saved", tmpNeed = 2 }
     function def.room(st)
       local t = {}
       for _, cp in ipairs(S.calPairs(st.cfg)) do t[#t + 1] = cp.l; t[#t + 1] = cp.r end
@@ -384,12 +384,12 @@ return function(L, STD, W, S)
         local k = S.calValues(st, cp.r.role)
         for _, i in ipairs(ORDER) do
           local x = S.CAL_X[i]
-          local dir = math.abs(x) .. " % " .. (x > 0 and "opp" or "ned")
+          local dir = math.abs(x) .. " % " .. (x > 0 and "up" or "down")
           list[#list + 1] = {
             label = cp.r.name .. "  " .. dir, min = -S.CAL_MAX, max = S.CAL_MAX, span = 10, fine = 1,
             fmt = signed, roles = { cp.r.role, cp.l.role },
-            hint = { cp.l.name .. " og " .. cp.r.name .. " står på " .. dir .. ".",
-              "Juster " .. cp.r.name .. " til samme utslag som " .. cp.l.name .. "." },
+            hint = { cp.l.name .. " and " .. cp.r.name .. " are at " .. dir .. ".",
+              "Adjust " .. cp.r.name .. " to the same throw as " .. cp.l.name .. "." },
             graph = function(v)
               local pts = { { -100, 0 } }
               for j, xj in ipairs(S.CAL_X) do
@@ -408,7 +408,7 @@ return function(L, STD, W, S)
       return list
     end
     function def.done(st) st.done.cal = true end
-    def.empty = "Ingen ror med venstre og høyre side."
+    def.empty = "No surfaces with a left and right side."
     return A.adjustScreen(def)
   end
 
@@ -435,7 +435,7 @@ return function(L, STD, W, S)
   -- rekkefølge. Roret viser verdien med en testmix, så flymodus og kontroll trenger ikke
   -- stilles. Min kan være 0 (nøytral).
   local function camberScreen()
-    local def = { title = "Termikk / Speed per ror", tmpNeed = 6 }   -- alle vingerorene vises
+    local def = { title = "Thermal / Speed per surface", tmpNeed = 6 }   -- alle vingerorene vises
     function def.room(st) return wingRoles(st.cfg) end
     local MAXS = L.findSource({ "max", "MAX" })
     local shown = {}
@@ -460,28 +460,28 @@ return function(L, STD, W, S)
       local used = {}
       for _, fm in ipairs(S.usedFMs(st.cfg, prof)) do used[fm] = true end
       local wing = wingRoles(st.cfg)
-      for _, m in ipairs({ { fm = 4, name = "Termikk", k = "t" }, { fm = 3, name = "Speed", k = "s" } }) do
+      for _, m in ipairs({ { fm = 4, name = "Thermal", k = "t" }, { fm = 3, name = "Speed", k = "s" } }) do
         if used[m.fm] then
           for _, ende in ipairs(cam and { "Max", "Min" } or { "Max" }) do
             local key = m.k .. ende
             for _, c in ipairs(wing) do
               local hint
               if not cam then
-                hint = { "Fast camber i " .. m.name .. " (ingen kontroll).", "Roret viser verdien." }
+                hint = { "Fixed camber in " .. m.name .. " (no control).", "The surface shows the value." }
               elseif ende == "Max" then
-                hint = { cam.label .. " bak: mest utslag.", "Alle rorene viser sin maks." }
+                hint = { cam.label .. " back: most throw.", "All surfaces show their max." }
               else
-                hint = { cam.label .. " fram: minst utslag. 0 = nøytral.", "Alle rorene viser sin min." }
+                hint = { cam.label .. " forward: least throw. 0 = neutral.", "All surfaces show their min." }
               end
               list[#list + 1] = {
-                label = c.name .. "  " .. m.name .. (ende == "Max" and " maks" or " min"),
+                label = c.name .. "  " .. m.name .. (ende == "Max" and " max" or " min"),
                 min = -100, max = 100, span = 50, fmt = updown, roles = { c.role }, hint = hint,
                 graph = cam and function(v)
                   local k = st.adj.camber[c.role]
                   local mx = ende == "Max" and v or k[m.k .. "Max"]
                   local mn = ende == "Min" and v or k[m.k .. "Min"]
-                  local pts, names, act = { { back, mx }, { -back, mn } }, { "Maks", "Min" }, ende == "Max" and 1 or 2
-                  if back > 0 then pts = { pts[2], pts[1] }; names = { "Min", "Maks" }; act = 3 - act end
+                  local pts, names, act = { { back, mx }, { -back, mn } }, { "Max", "Min" }, ende == "Max" and 1 or 2
+                  if back > 0 then pts = { pts[2], pts[1] }; names = { "Min", "Max" }; act = 3 - act end
                   return pts, { active = act, names = names, range = A.range(pts), cursor = L.value(cam) / 10.24 }
                 end or nil,
                 get = function() return st.adj.camber[c.role][key] end,
@@ -498,7 +498,7 @@ return function(L, STD, W, S)
       end
       return list
     end
-    def.empty = "Modellen bruker ikke Termikk eller Speed."
+    def.empty = "The model does not use Thermal or Speed."
     return A.adjustScreen(def)
   end
 
@@ -510,23 +510,23 @@ return function(L, STD, W, S)
         local flap = S.FLAPS[c.role] ~= nil
         -- Flaps går bare ned. Ailerons kan gå opp (+) eller ned (-) ved crow (Jo Grini 2026-11-09).
         list[#list + 1] = {
-          label = c.name .. (flap and "  ned" or ""), min = flap and 0 or -100, max = 100, span = 50,
+          label = c.name .. (flap and "  down" or ""), min = flap and 0 or -100, max = 100, span = 50,
           fmt = not flap and updown or nil, roles = { c.role },
-          hint = { "Trekk butterfly-kontrollen helt (full crow).", flap and "Flaps ned." or "Ailerons opp (+) eller ned (-)." },
+          hint = { "Pull the butterfly control fully (full crow).", flap and "Flaps down." or "Ailerons up (+) or down (-)." },
           get = function() return st.adj.crow[c.role] end,
           set = function(_, v) st.adj.crow[c.role] = v; S.applyCrow(st, c.role) end,
         }
       end
       list[#list + 1] = {
-        label = "Aileron ved full crow", min = 20, max = 100, span = 40, roles = AIL_ROLES,
-        hint = { "Full crow og aileron-utslag.", "Hvor mye aileron som er igjen ved full crow." },
+        label = "Aileron at full crow", min = 20, max = 100, span = 40, roles = AIL_ROLES,
+        hint = { "Full crow and aileron throw.", "How much aileron is left at full crow." },
         get = function() return st.adj.crowRed end,
         set = function(_, v) st.adj.crowRed = v; S.writeCurve(st.cfg, prof, st, C.crowRed) end,
       }
       list[#list + 1] = {
-        label = "Differensial ved full crow", min = 0, max = 100, span = 50, roles = AIL_ROLES,
-        hint = { "Full crow og aileron-utslag.", "Ned-aileron i % av vanlig. 100 % = som uten crow." },
-        fmt = function(v) return v .. " % ned" end,
+        label = "Differential at full crow", min = 0, max = 100, span = 50, roles = AIL_ROLES,
+        hint = { "Full crow and aileron throw.", "Down aileron in % of normal. 100 % = as without crow." },
+        fmt = function(v) return v .. " % down" end,
         get = function() return st.adj.crowDiff end,
         set = function(_, v) st.adj.crowDiff = v; S.applyCrowDiff(st, prof) end,
       }
@@ -539,21 +539,21 @@ return function(L, STD, W, S)
   local XS = { -100, -67, -33, 0, 33, 67, 100 }
   local function eleCompScreen()
     local crowC
-    local def = { title = "Høyderor ved butterfly", doneText = "Kurven er lagret" }
+    local def = { title = "Elevator with butterfly", doneText = "Curve saved" }
     function def.entries(st, prof)
       crowC = prof.crow and L.ctrl(prof.crow.ctrl)
       if not (crowC and crowC.id) then return {} end
       local list = {}
       for i = 1, 7 do
         list[i] = {
-          label = "Punkt " .. i .. "  (" .. crowC.label .. " " .. XS[i] .. " %)", min = -100, max = 100, span = 50,
+          label = "Point " .. i .. "  (" .. crowC.label .. " " .. XS[i] .. " %)", min = -100, max = 100, span = 50,
           fmt = updown, roles = ELEV_ROLES,
           graph = function(v)
             local pts = {}
             for j = 1, 7 do pts[j] = { XS[j], j == i and v or st.adj.eleComp[j] } end
             return pts, { active = i, range = A.range(pts), cursor = L.value(crowC) / 10.24 }
           end,
-          hint = { "Flytt " .. crowC.label .. " til punktene. Potten justerer", "høyderoret i punktet stikka står i." },
+          hint = { "Move " .. crowC.label .. " to the points. The pot adjusts", "the elevator at the point the stick is at." },
           get = function() return st.adj.eleComp[i] end,
           set = function(_, v) st.adj.eleComp[i] = v; S.writeCurve(st.cfg, prof, st, C.eleComp) end,
         }
@@ -684,30 +684,30 @@ return function(L, STD, W, S)
 
     function s:draw(list)
       local G = W.G
-      L.header("Høyderor ved butterfly i lufta", fmName(currentFM()))
+      L.header("Elevator with butterfly in the air", fmName(currentFM()))
       if not (s.crow and s.crow.id and s.test and s.test.id) then
-        L.text(20, 70, "Mangler butterfly-kontroll eller testbryter i pilotoppsettet.")
-        L.btnRow(list, { { "Tilbake", function() L.pop() end } })
+        L.text(20, 70, "Butterfly control or test switch missing in pilot setup.")
+        L.btnRow(list, { { "Back", function() L.pop() end } })
         return
       end
       local comp = s.st.adj.eleComp
-      L.text(20, 60, s.pt and ("Punkt " .. s.pt .. "  (" .. s.crow.label .. " " .. XS[s.pt] .. " %)") or "Ikke på punkt",
+      L.text(20, 60, s.pt and ("Point " .. s.pt .. "  (" .. s.crow.label .. " " .. XS[s.pt] .. " %)") or "Not on a point",
         DBLSIZE, s.pt and L.C.act or L.C.dim)
-      if s.pt then L.text(20, 112, "Kurve nå: " .. updown(comp[s.pt]), MIDSIZE) end
-      L.text(20, 150, "Stikka gir nå: " .. updown(L.clamp(L.round(s.delta(s.x or 0)), -AIR.maxStep, AIR.maxStep)), 0, L.C.text)
+      if s.pt then L.text(20, 112, "Curve now: " .. updown(comp[s.pt]), MIDSIZE) end
+      L.text(20, 150, "Stick gives now: " .. updown(L.clamp(L.round(s.delta(s.x or 0)), -AIR.maxStep, AIR.maxStep)), 0, L.C.text)
       if s.last then
-        L.text(20, 180, "Lagret: punkt " .. s.last.k .. " " .. updown(s.last.d), 0, L.C.ok)
+        L.text(20, 180, "Saved: point " .. s.last.k .. " " .. updown(s.last.d), 0, L.C.ok)
       end
-      L.text(20, 222, "1. Trekk " .. s.crow.label .. " til et punkt (radioen sier punktet).", SMLSIZE, L.C.dim)
-      L.text(20, 244, "2. Hold flyet i rett flukt med høyderorsstikka.", SMLSIZE, L.C.dim)
-      L.text(20, 266, "3. Kort klikk " .. s.test.label .. ": lagres. Slipp stikka.", SMLSIZE, L.C.dim)
-      L.text(20, 288, "Langt trykk " .. s.test.label .. " (1 s): angre. Maks " .. AIR.maxStep .. " % per klikk.", SMLSIZE, L.C.dim)
-      L.text(20, 318, "Grov forskyvning: høyderorstrimmen i Landing.", SMLSIZE, L.C.dim)
+      L.text(20, 222, "1. Pull " .. s.crow.label .. " to a point (the radio says the point).", SMLSIZE, L.C.dim)
+      L.text(20, 244, "2. Hold the plane level with the elevator stick.", SMLSIZE, L.C.dim)
+      L.text(20, 266, "3. Short click " .. s.test.label .. ": saved. Release the stick.", SMLSIZE, L.C.dim)
+      L.text(20, 288, "Long press " .. s.test.label .. " (1 s): undo. Max " .. AIR.maxStep .. " % per click.", SMLSIZE, L.C.dim)
+      L.text(20, 318, "Coarse offset: the elevator trim in Landing.", SMLSIZE, L.C.dim)
       local pts = {}
       for j = 1, 7 do pts[j] = { XS[j], comp[j] } end
       G.curve(440, 120, 340, 200, pts, { active = s.pt, range = A.range(pts), cursor = L.value(s.crow) / 10.24 })
       L.btnRow(list, { { "Angre", undo, { enabled = #s.undo > 0, primary = false } },
-        { "Ferdig", function() L.toast("Kurven er lagret"); L.pop() end } })
+        { "Done", function() L.toast("Curve saved"); L.pop() end } })
     end
 
     return s
@@ -730,25 +730,25 @@ return function(L, STD, W, S)
   -- Kikkflapp: først maks utslag per ror (kikkflappen står på 100 % imens), så hvor mye
   -- av maks som brukes i hver flymodus. Ikke i Landing.
   local function snapScreen()
-    local def = { title = "Kikkflapp" }
+    local def = { title = "Snap flap" }
     local st0
     function def.entries(st, prof)
       st0 = st
       local list = {}
       for _, c in ipairs(wingRoles(st.cfg, function(r) return S.FLAPS[r] or r == "ailL" or r == "ailR" end)) do
         list[#list + 1] = {
-          label = "Maks kikkflapp " .. c.name, min = 0, max = V.snapShareMax, span = V.snapShareMax / 2,
+          label = "Max snap flap " .. c.name, min = 0, max = V.snapShareMax, span = V.snapShareMax / 2,
           roles = { c.role },
-          hint = { "Trekk høyderoret helt opp.", "Juster roret til maks kikkflapp." },
+          hint = { "Pull full up elevator.", "Adjust the surface to max snap flap." },
           get = function() return st.adj.snapShare[c.role] end,
           set = function(_, v) st.adj.snapShare[c.role] = v; S.applySnapShare(st, prof, c.role) end,
           prep = function() S.snapFull(st, true) end,
         }
       end
       list[#list + 1] = {
-        label = "Kikkflapp i flymodus", fm = true, min = 0, max = 100, span = 50, roles = FLAP_ROLES,
-        skipFM = S.SNAP_SKIP, fmt = function(v) return v .. " % av maks" end,
-        hint = { "Trekk høyderoret helt opp.", "0 % = ingen kikkflapp i denne flymodusen." },
+        label = "Snap flap in flight mode", fm = true, min = 0, max = 100, span = 50, roles = FLAP_ROLES,
+        skipFM = S.SNAP_SKIP, fmt = function(v) return v .. " % of max" end,
+        hint = { "Pull full up elevator.", "0 % = no snap flap in this flight mode." },
         get = function(fm) return st.adj.snap[fm] or 0 end,
         set = function(fm, v)
           if S.SNAP_SKIP[fm] then return end
@@ -763,36 +763,36 @@ return function(L, STD, W, S)
   end
 
   local function motorScreen()
-    local def = { title = "Motor", doneText = "Motor lagret" }
+    local def = { title = "Motor", doneText = "Motor saved" }
     function def.entries(st, prof)
       if not st.cfg.motor then return {} end
       local pw = prof.motor_pwr and L.ctrl(prof.motor_pwr.ctrl)
       local list = {}
-      local warn = "HOLD FLYET. Hold deg unna propellen."
-      for i, n in ipairs({ "Liten", "Medium", "Full" }) do
+      local warn = "HOLD THE MODEL. Keep clear of the propeller."
+      for i, n in ipairs({ "Low", "Medium", "Full" }) do
         list[#list + 1] = {
           label = "Motor " .. n, min = 0, max = 100, span = 50,
-          hint = { (pw and ("Sett " .. pw.label .. " til " .. n .. ", ") or "") .. "motorbryter på.", warn },
+          hint = { (pw and ("Set " .. pw.label .. " to " .. n .. ", ") or "") .. "motor switch on.", warn },
           get = function() return st.adj.motor[i] end,
           set = function(_, v) st.adj.motor[i] = v; S.writeCurve(st.cfg, prof, st, C.motor) end,
         }
       end
       list[#list + 1] = {
-        label = "Motor -> høyderor", min = -30, max = 30, span = 15, fmt = updown, roles = ELEV_ROLES,
-        hint = { "Høyderor ved full motor (+ = opp).", "Skaleres med motorkraften." },
+        label = "Motor -> elevator", min = -30, max = 30, span = 15, fmt = updown, roles = ELEV_ROLES,
+        hint = { "Elevator at full motor (+ = up).", "Scales with motor power." },
         get = function() return st.adj.motorEle end,
         set = function(_, v) st.adj.motorEle = v; S.applyMotorEle(st) end,
       }
       return list
     end
-    def.empty = "Modellen har ikke motor (steg 0)."
+    def.empty = "The model has no motor (step 0)."
     return A.adjustScreen(def)
   end
 
   -- Overgang mellom flymoduser: hvor lang tid det tar å gå over til (og ut av) flymodusen.
   -- Normal, Termikk, Speed og motor (felles). Landing og Launch er faste.
   local function fadeScreen()
-    local def = { title = "Overgang mellom flymoduser", noSH = true }
+    local def = { title = "Flight mode transition", noSH = true }
     function def.entries(st, prof)
       local used = {}
       for _, fm in ipairs(S.usedFMs(st.cfg, prof)) do used[fm] = true end
@@ -808,10 +808,10 @@ return function(L, STD, W, S)
       end
       for _, g in ipairs(S.FADE_GROUPS) do
         if used[g.fms[1]] then
-          entry(g, "fadeIn", "Inn til " .. g.name, { "Tiden det tar å gå over til " .. g.name .. ".",
-            "0 = straks, maks 3 s. Prøv med flymodusbryteren." })
-          entry(g, "fadeOut", "Ut av " .. g.name, { "Tiden det tar å gå ut av " .. g.name .. ".",
-            "Overgang A til B: ut av A og inn til B." })
+          entry(g, "fadeIn", "Into " .. g.name, { "Time to change into " .. g.name .. ".",
+            "0 = instant, max 3 s. Try with the flight mode switch." })
+          entry(g, "fadeOut", "Out of " .. g.name, { "Time to change out of " .. g.name .. ".",
+            "Change A to B: out of A and into B." })
         end
       end
       return list
@@ -844,12 +844,12 @@ return function(L, STD, W, S)
         }
       end
       return {
-        side("afDown", -1, "Ail -> Flap ned", { "Begge flaps viser ned-utslaget nå.", "I % av flappens utslag ned." }),
-        side("afUp", 1, "Ail -> Flap opp", { "Begge flaps viser opp-utslaget nå.", "I % av flappens utslag opp." }),
+        side("afDown", -1, "Ail -> Flap down", { "Both flaps now show the down throw.", "In % of the flap's down throw." }),
+        side("afUp", 1, "Ail -> Flap up", { "Both flaps now show the up throw.", "In % of the flap's up throw." }),
         {
-          label = "Ail -> Flap i flymodus", fm = true, min = 0, max = 150, span = 50, roles = FLAP_ROLES,
-          fmt = function(v) return v .. " % av ned/opp" end,
-          hint = { "Gi full aileron og se på flapsene.", "100 % = utslaget satt i ned og opp. 0 % = av." },
+          label = "Ail -> Flap in flight mode", fm = true, min = 0, max = 150, span = 50, roles = FLAP_ROLES,
+          fmt = function(v) return v .. " % of down/up" end,
+          hint = { "Give full aileron and watch the flaps.", "100 % = the throw set in down and up. 0 % = off." },
           get = function(fm) return st.adj.afFM[fm] or 0 end,
           set = function(fm, v) st.adj.afFM[fm] = v; S.applyPerFM(st, "afFM", fm) end,
           prep = function() show(nil) end,
@@ -865,15 +865,15 @@ return function(L, STD, W, S)
     -- Expo er standard. Knappen nederst bytter til differensial; der velges vinge eller V-hale
     -- med knappene under flyfiguren.
     local mode = "expo"
-    local TITLE = { expo = "Expo", diff = "Differensial" }
-    local def = { title = TITLE[mode], doneText = "Differensial og expo lagret" }
+    local TITLE = { expo = "Expo", diff = "Differential" }
+    local def = { title = TITLE[mode], doneText = "Differential and expo saved" }
     local trims = {}
     local function hasDiff(prof)
       return (prof.difftrim and L.trimSource(prof.difftrim.trim)) ~= nil
     end
     def.toggle = {
       show = function(_, prof) return hasDiff(prof) end,
-      label = function() return mode == "expo" and "Differensial" or "Expo" end,
+      label = function() return mode == "expo" and "Differential" or "Expo" end,
       fn = function() mode = mode == "expo" and "diff" or "expo"; def.title = TITLE[mode] end,
     }
     function def.entries(st, prof)
@@ -885,16 +885,16 @@ return function(L, STD, W, S)
         trims[kind] = { label = t, id = id }
         list[#list + 1] = {
           label = label, min = 0, max = 100, span = 50, roles = roles, kind = kind, pick = pick,
-          fmt = function(v) return v .. " % av utslaget" end,
-          hint = { t .. " fullt ut endrer " .. what .. " ned med så", "mye, den ene eller andre veien. Standard " .. V[key] .. " %." },
+          fmt = function(v) return v .. " % of the throw" end,
+          hint = { t .. " at full changes " .. what .. " down by that", "much, one way or the other. Default " .. V[key] .. " %." },
           get = function() return st.adj[key] end,
           set = function(_, v) st.adj[key] = v; S.applyDiff(st, prof, kind) end,
         }
       end
       if mode == "diff" then
-        entry("ail", "diffTrim", prof.difftrim, "Aileron-differensial", { "ailL", "ailR" }, "aileron", "Vinge")
+        entry("ail", "diffTrim", prof.difftrim, "Aileron differential", { "ailL", "ailR" }, "aileron", "Wing")
         if st.cfg.tail == "V" then
-          entry("rud", "vdiffTrim", prof.vdifftrim, "V-hale-differensial", { "vL", "vR" }, "sideroret", "V-hale")
+          entry("rud", "vdiffTrim", prof.vdifftrim, "V-tail differential", { "vL", "vR" }, "the rudder", "V-tail")
         end
         return list
       end
@@ -903,11 +903,11 @@ return function(L, STD, W, S)
         list[#list + 1] = {
           label = label, min = -100, max = 100, span = 50, roles = roles,
           fmt = function(v)
-            if v == 0 then return "0 % (lineær)" end
-            return v .. " %" .. (v < 0 and " (mykt " or " (hardt ") .. (crow and "i starten)" or "senter)")
+            if v == 0 then return "0 % (linear)" end
+            return v .. " %" .. (v < 0 and " (soft " or " (hard ") .. (crow and "at the start)" or "center)")
           end,
-          hint = crow and { "Negativ = mykt i starten av crow,", "positiv = mer crow tidlig. Full crow er lik." }
-            or { "Negativ = mykt rundt senter av stikka,", "positiv = hardere. Fullt utslag er likt." },
+          hint = crow and { "Negative = soft at the start of crow,", "positive = more crow early. Full crow is the same." }
+            or { "Negative = soft around stick center,", "positive = harder. Full throw is the same." },
           -- Grafen: utslag over stikka (butterfly: fra crow av til full crow)
           graph = function(v)
             local pts = {}
@@ -922,8 +922,8 @@ return function(L, STD, W, S)
         }
       end
       expo("ail", "Expo aileron", { "ailL", "ailR" })
-      expo("ele", "Expo høyderor", ELEV_ROLES)
-      expo("rud", "Expo sideror", RUD_ROLES)
+      expo("ele", "Expo elevator", ELEV_ROLES)
+      expo("rud", "Expo rudder", RUD_ROLES)
       if prof.crow and L.ctrl(prof.crow.ctrl) then
         expo("crow", "Expo butterfly", { "ailL", "ailR", "flapL", "flapR" }, true)
       end
@@ -934,9 +934,9 @@ return function(L, STD, W, S)
       local t = trims[e.kind]
       if not t then return end
       local tr = L.round((getValue(t.id) or 0) / 10.24)
-      L.text(x, y, t.label .. " nå: " .. tr .. " %  =  " .. L.round(tr * s.val / 100) .. " % av utslaget ned", SMLSIZE)
+      L.text(x, y, t.label .. " now: " .. tr .. " %  =  " .. L.round(tr * s.val / 100) .. " % of the down throw", SMLSIZE)
     end
-    def.empty = "Velg trimknapp for differensial i pilotoppsettet."
+    def.empty = "Choose a trim button for differential in Pilot setup."
     def.leave = function() mode = "expo"; def.title = TITLE[mode] end
     return A.adjustScreen(def)
   end
@@ -945,19 +945,19 @@ return function(L, STD, W, S)
     local s = {}
     -- 4. felt: farlig i lufta (testmikser låser rorene, eller hele oppsettet kan skrives på nytt)
     local items = {
-      { "Termikk / Speed per ror", camberScreen, nil, true },
+      { "Thermal / Speed per surface", camberScreen, nil, true },
       { "Butterfly (crow)", crowScreen },
-      { "Høyderor ved butterfly (kurve)", eleCompScreen, nil, true },
-      { "Høyderor ved butterfly i lufta", A.eleAirScreen },
-      { "Aileron -> sideror (per FM)", function()
-        return perFMScreen("ailRud", "Aileron -> sideror", "Ail -> Rud", { "Gi aileron og se på sideroret." }, 100,
+      { "Elevator with butterfly (curve)", eleCompScreen, nil, true },
+      { "Elevator with butterfly in the air", A.eleAirScreen },
+      { "Aileron -> rudder (per FM)", function()
+        return perFMScreen("ailRud", "Aileron -> rudder", "Ail -> Rud", { "Give aileron and watch the rudder." }, 100,
           nil, RUD_ROLES)
       end },
-      { "Kikkflapp (per FM)", snapScreen },
-      { "Differensial og expo", diffScreen, nil, true },
+      { "Snap flap (per FM)", snapScreen },
+      { "Differential and expo", diffScreen, nil, true },
       { "Aileron -> flaps (per FM)", ailFlapScreen, function(st) return st.cfg.wing >= 4 end, true },
-      { "Motor: nivå og høyderor", motorScreen, function(st) return st.cfg.motor end },
-      { "Overgang mellom flymoduser", fadeScreen },
+      { "Motor: level and elevator", motorScreen, function(st) return st.cfg.motor end },
+      { "Flight mode transition", fadeScreen },
     }
 
     function s:enter()
@@ -970,26 +970,26 @@ return function(L, STD, W, S)
     local function open(it) return function() local x = it[2](); x.danger = it[4]; L.push(x) end end
 
     function s:draw(list)
-      L.header("6 - Justering", fmName(currentFM()))
+      L.header("6 - Adjust", fmName(currentFM()))
       local lock = W.locked()
       for i, it in ipairs(items) do
         local en = (not it[3] or it[3](s.st)) and not (lock and it[4])
         L.btn(list, 20, 56 + (i - 1) * 31, 500, 28, it[1], en and open(it) or nil, { left = true, icon = true })
       end
       if lock then
-        L.text(540, 214, "Sperret etter motor:", SMLSIZE, L.C.warn)
-        L.text(540, 238, "motorbryter av og", SMLSIZE, L.C.warn)
-        L.text(540, 262, "stikkene i ro i 15 s.", SMLSIZE, L.C.warn)
+        L.text(540, 214, "Locked after motor:", SMLSIZE, L.C.warn)
+        L.text(540, 238, "motor switch off and", SMLSIZE, L.C.warn)
+        L.text(540, 262, "sticks still for 15 s.", SMLSIZE, L.C.warn)
       end
-      L.text(540, 62, "Differensial:", SMLSIZE, L.C.dim)
+      L.text(540, 62, "Differential:", SMLSIZE, L.C.dim)
       local prof = s.prof or {}
-      L.text(540, 86, "Trim i lufta: Ail " .. trimName(prof.difftrim) .. " egen per FM,", SMLSIZE, L.C.dim)
+      L.text(540, 86, "Trim in flight: Ail " .. trimName(prof.difftrim) .. " own per FM,", SMLSIZE, L.C.dim)
       if s.st.cfg and s.st.cfg.tail == "V" then
-        L.text(540, 110, "V-hale " .. trimName(prof.vdifftrim) .. " lik i alle FM.", SMLSIZE, L.C.dim)
+        L.text(540, 110, "V-tail " .. trimName(prof.vdifftrim) .. " same in all FMs.", SMLSIZE, L.C.dim)
       end
-      L.text(540, 150, "Per FM: bytt flymodus med", SMLSIZE, L.C.dim)
-      L.text(540, 174, "bryteren mens du justerer.", SMLSIZE, L.C.dim)
-      L.btnRow(list, { { "Tilbake", function() L.pop() end } })
+      L.text(540, 150, "Per FM: change flight mode with", SMLSIZE, L.C.dim)
+      L.text(540, 174, "the switch while adjusting.", SMLSIZE, L.C.dim)
+      L.btnRow(list, { { "Back", function() L.pop() end } })
     end
 
     return s
@@ -1019,20 +1019,20 @@ return function(L, STD, W, S)
     function s:back() cancel() end
 
     function s:draw(list)
-      L.header("ESC-kalibrering", "CH" .. mch)
+      L.header("ESC calibration", "CH" .. mch)
       local t
       if s.step == 0 then
-        t = { "TA AV PROPELLEN før du starter.", "Flybatteriet skal være frakoblet.",
-              "Start: kanalen går til FULL Throttle (1998 us). Null Throttle er 1003 us." }
+        t = { "REMOVE THE PROPELLER before you start.", "The flight battery must be disconnected.",
+              "Start: the channel goes to FULL Throttle (1998 us). Zero Throttle is 1003 us." }
       elseif s.step == 1 then
-        t = { "Full Throttle sendes nå.", "Koble til flybatteriet og vent på pipene fra ESC-en.", "Trykk Neste for null Throttle." }
+        t = { "Full Throttle is being sent.", "Connect the flight battery and wait for the ESC beeps.", "Press Next for zero Throttle." }
       else
-        t = { "Null Throttle sendes nå.", "Vent på pipene som bekrefter kalibreringen.", "Trykk Ferdig." }
+        t = { "Zero Throttle is being sent.", "Wait for the beeps that confirm the calibration.", "Press Done." }
       end
       for i, x in ipairs(t) do L.text(20, 70 + (i - 1) * 36, x, 0, (s.step == 0 and i == 1) and L.C.warn or L.C.text) end
-      L.text(20, 200, "Prosedyren varierer mellom ESC-er. Sjekk manualen til din.", SMLSIZE, L.C.dim)
-      L.text(20, 226, "Er motorsperren aktiv (Landing), sender CH" .. mch .. " -100 % uansett.", SMLSIZE, L.C.dim)
-      local items = { { "Avbryt", cancel } }
+      L.text(20, 200, "The procedure varies between ESCs. Check your manual.", SMLSIZE, L.C.dim)
+      L.text(20, 226, "If the motor lock is on (Landing), CH" .. mch .. " sends -100 % anyway.", SMLSIZE, L.C.dim)
+      local items = { { "Cancel", cancel } }
       if s.step == 0 then
         items[2] = { "Start (full Throttle)", function()
           L.setOutput(mch - 1, { min = V.motorMin, max = V.motorMax, ppmCenter = 0 })
@@ -1040,13 +1040,13 @@ return function(L, STD, W, S)
           s.step = 1
         end }
       elseif s.step == 1 then
-        items[2] = { "Neste (null Throttle)", function() set(-100); s.step = 2 end }
+        items[2] = { "Next (zero Throttle)", function() set(-100); s.step = 2 end }
       else
-        items[2] = { "Ferdig", function()
+        items[2] = { "Done", function()
           set(nil)
           s.st.done.esc = true
           W.saveState()
-          L.toast("ESC kalibrert")
+          L.toast("ESC calibrated")
           L.pop()
         end }
       end
@@ -1066,7 +1066,7 @@ return function(L, STD, W, S)
   function A.failsafeScreen()
     local s = {}
     local MAXS = L.findSource({ "max", "MAX" })
-    local CR = loadScript("/SCRIPTS/RM/crsf.lua")()
+    local CR = loadScript("/SCRIPTS/F3X/crsf.lua")()
 
     function s:enter()
       s.st = W.state()
@@ -1112,47 +1112,47 @@ return function(L, STD, W, S)
 
     function s:draw(list)
       local tested = s.st.check.failsafe
-      L.header("7 - Failsafe", tested and "testet" or "")
+      L.header("7 - Failsafe", tested and "tested" or "")
       local y = 56
       local function t(txt, col) L.text(20, y, txt, SMLSIZE, col or L.C.text); y = y + 21 end
-      t("Failsafe er det mottakeren gjør når signalet fra senderen blir borte.", L.C.act)
-      t("ELRS går til failsafe etter ca. 1 s uten signal. Verdiene lagres i", L.C.dim)
-      t("mottakeren, så failsafe i EdgeTX (modell-oppsettet) brukes ikke.", L.C.dim)
-      t("Før første tilkobling gir mottakeren ingen pulser.", L.C.dim)
-      t("Her: motor av og alle ror i nøytral (de står slik nå).", L.C.dim)
+      t("Failsafe is what the receiver does when the signal from the radio is lost.", L.C.act)
+      t("ELRS goes to failsafe after about 1 s without signal. The values are stored in", L.C.dim)
+      t("the receiver, so failsafe in EdgeTX (model setup) is not used.", L.C.dim)
+      t("Before the first connection the receiver gives no pulses.", L.C.dim)
+      t("Here: motor off and all surfaces neutral (they are held there now).", L.C.dim)
       y = y + 6
-      t("1. Mottakeren på og bundet. TA AV PROPELLEN.")
-      t("2. Trykk Lagre i mottakeren.")
-      t("3. Test: slå av senderen. Innen ca. 1 s skal motoren stoppe")
-      t("    og rorene gå til nøytral. Slå på igjen, trykk Testet OK.")
+      t("1. Receiver on and bound. REMOVE THE PROPELLER.")
+      t("2. Press Save to receiver.")
+      t("3. Test: switch off the radio. Within about 1 s the motor must stop")
+      t("    and the surfaces go neutral. Switch on again, press Tested OK.")
       y = y + 6
       if s.job then
         local ok = s.job.state == "done"
         local bad = s.job.state == "notfound" or s.job.state == "noreply" or s.job.state == "nocrsf"
         t(s.job.text or "", ok and L.C.ok or (bad and L.C.warn or L.C.text))
       elseif s.st.fsSaved then
-        t("Lagret i mottakeren før. Lagre på nytt etter endring i steg 2.", L.C.dim)
+        t("Saved to the receiver before. Save again after changes in step 2.", L.C.dim)
       end
-      if s.full then t("Mikstaket: ikke alle ror holdes. Lagre ikke nå.", L.C.warn) end
+      if s.full then t("Mix limit: not all surfaces are held. Do not save now.", L.C.warn) end
       -- Til høyre: verdiene som lagres (til web-siden hvis kommandoen ikke virker)
-      L.text(560, 56, "Failsafe-verdier", 0, L.C.dim)
+      L.text(560, 56, "Failsafe values", 0, L.C.dim)
       for i, c in ipairs(s.chs) do
         L.text(560, 60 + i * 22, "CH" .. c.ch .. "  " .. c.name, SMLSIZE)
         L.text(780, 60 + i * 22, us(c.ch) .. " µs", SMLSIZE + RIGHT)
       end
       local yy = 70 + (#s.chs + 1) * 22
       L.text(560, yy, "RQly: " .. tele("RQly") .. " %", SMLSIZE)
-      L.text(560, yy + 24, "Virker ikke Lagre? Tast verdiene", SMLSIZE, L.C.dim)
-      L.text(560, yy + 46, "inn på mottakerens web-side.", SMLSIZE, L.C.dim)
+      L.text(560, yy + 24, "Save not working? Enter the values", SMLSIZE, L.C.dim)
+      L.text(560, yy + 46, "on the receiver's web page.", SMLSIZE, L.C.dim)
       local st8 = s.job and s.job.state
       local busy = st8 and st8 ~= "done" and st8 ~= "notfound" and st8 ~= "noreply" and st8 ~= "nocrsf"
       L.btnRow(list, {
-        { "Tilbake", function() L.pop() end },
-        { "Lagre i mottakeren", function()
+        { "Back", function() L.pop() end },
+        { "Save to receiver", function()
           s.saved = false
           s.job = CR.new(function(n) return string.find(string.lower(n), "failsafe", 1, true) ~= nil end)
         end, { enabled = not busy and not s.full, primary = false } },
-        { tested and "Ikke testet" or "Testet OK", function()
+        { tested and "Not tested" or "Tested OK", function()
           s.st.check.failsafe = not tested or nil
           W.saveState()
         end },
@@ -1166,16 +1166,16 @@ return function(L, STD, W, S)
   -- Steg 8: sjekkliste for det som ikke kan settes fra Lua, og telemetri
 
   A.CHECKS = {
-    { "bind", "Mottaker bundet (ELRS)" },
-    { "range", "Rekkeviddetest gjort" },
+    { "bind", "Receiver bound (ELRS)" },
+    { "range", "Range check done" },
     { "fullres", "ELRS 4: 100Hz Full, 8ch" },
-    { "telem", "ELRS: Telem Ratio er ikke Race" },
+    { "telem", "ELRS: Telem Ratio is not Race" },
     { "bindsto", "ELRS RX: Bind Storage = Persistent" },
-    { "arm", "Arm using: Switch, ON (CH5 blir vanlig)" },
-    { "ext", "Extended limits på (MODEL SETUP)" },
-    { "failsafe", "Failsafe satt og testet (meny 7)" },
-    { "swwarn", "Throttle-advarsel av, motorbryter Off ved start" },
-    { "sounds", "Lydfilene ligger i /SOUNDS/<språk>/" },
+    { "arm", "Arm using: Switch, ON (CH5 becomes normal)" },
+    { "ext", "Extended limits on (MODEL SETUP)" },
+    { "failsafe", "Failsafe set and tested (menu 7)" },
+    { "swwarn", "Throttle warning off, motor switch Off at start" },
+    { "sounds", "Sound files are in /SOUNDS/<language>/" },
   }
 
   function A.checkDone(st)
@@ -1200,7 +1200,7 @@ return function(L, STD, W, S)
     end
 
     function s:draw(list)
-      L.header("8 - Sjekkliste", A.checkDone(s.st) .. " / " .. #A.CHECKS)
+      L.header("8 - Checklist", A.checkDone(s.st) .. " / " .. #A.CHECKS)
       for i, c in ipairs(A.CHECKS) do
         local on = s.st.check[c[1]]
         L.btn(list, 20, 56 + (i - 1) * 35, 520, 32, (on and "[x]  " or "[ ]  ") .. c[2], function()
@@ -1208,23 +1208,23 @@ return function(L, STD, W, S)
           W.saveState()
         end, { left = true, color = on and L.C.off or nil })
       end
-      L.text(560, 60, "Telemetri", 0, L.C.dim)
+      L.text(560, 60, "Telemetry", 0, L.C.dim)
       L.text(560, 92, "RQly: " .. tele("RQly") .. " %", SMLSIZE)
       L.text(560, 118, "1RSS: " .. tele("1RSS") .. " dB", SMLSIZE)
       L.text(560, 144, "RxBt: " .. tele("RxBt") .. " V", SMLSIZE)
-      L.text(560, 180, s.st.alarms and "Alarmer: lagt inn" or "Alarmer: ikke lagt inn", SMLSIZE,
+      L.text(560, 180, s.st.alarms and "Alarms: set" or "Alarms: not set", SMLSIZE,
         s.st.alarms and L.C.ok or L.C.dim)
       L.btnRow(list, {
-        { "Tilbake", function() L.pop() end, { default = true } },
-        { "Legg inn alarmer", function()
+        { "Back", function() L.pop() end, { default = true } },
+        { "Set alarms", function()
           if not L.findSource({ "RQly" }) and not L.findSource({ "RxBt" }) then
-            L.toast("Ingen telemetri ennå. Bind og slå på mottakeren.", true)
+            L.toast("No telemetry yet. Bind and power the receiver.", true)
             return
           end
           s.st.alarms = true
           local _, bad = S.write(S.plan(s.st.cfg, W.profile(), s.st), s.st)
           W.saveState()
-          L.toast(bad == 0 and "Alarmer lagt inn" or "Feil ved skriving, se steg 5", bad ~= 0)
+          L.toast(bad == 0 and "Alarms set" or "Write error, see step 5", bad ~= 0)
         end, { enabled = s.st.done.mix == true } },
       })
     end

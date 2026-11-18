@@ -11,8 +11,8 @@ local function load(path)
 end
 
 local function init()
-  local libC, stdC, flightC = load("/SCRIPTS/RM/lib.lua"), load("/SCRIPTS/RM/std.lua"),
-    load("/SCRIPTS/RM/flight.lua")
+  local libC, stdC, flightC = load("/SCRIPTS/F3X/lib.lua"), load("/SCRIPTS/F3X/std.lua"),
+    load("/SCRIPTS/F3X/flight.lua")
   if err then return end
   L = libC()
   local STD = stdC()

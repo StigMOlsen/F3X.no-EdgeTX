@@ -681,7 +681,7 @@ return function(L, STD, W)
     if tr and tr.on then
       local T = W.T
       if not T then
-        local c = loadScript("/SCRIPTS/RM/trainer.lua")
+        local c = loadScript("/SCRIPTS/F3X/trainer.lua")
         T = c and c()(L, STD, W, S)
         W.T = T
       end

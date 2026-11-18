@@ -16,17 +16,19 @@ Requirements
 
 Installation
 1. Connect the radio to the PC/Mac with USB and select "USB Storage (SD)".
-2. If you have an older version: first delete the folder SCRIPTS/RM and the files
-   SCRIPTS/TOOLS/F3X.lua and F3X.luac on the SD card. Keep SCRIPTS/RM/DATA if you want to
-   keep the pilot profile and models. Otherwise the radio may mix old compiled .luac files
-   with the new ones.
+2. If you have an older version: first delete the files SCRIPTS/TOOLS/F3X.lua and F3X.luac
+   and everything in SCRIPTS/F3X except DATA (pilot profile and models). Otherwise the radio
+   may mix old compiled .luac files with the new ones.
+   From v2026-11-18 or older: the program was in SCRIPTS/RM and is now in SCRIPTS/F3X. Copy in
+   the new version and start F3X.no once, and the data is moved from SCRIPTS/RM/DATA
+   automatically. THEN DELETE THE FOLDER SCRIPTS/RM.
    Then copy the folders SCRIPTS and SOUNDS from this package to the root of the SD card.
    Note: SOUNDS/en/launch.wav, normal.wav and speed.wav are replaced.
 3. Eject the disk and unplug USB.
 4. SYS -> Tools -> F3X.no.
 
 Run Diagnostics first, in an empty test model. The results are saved in
-SCRIPTS/RM/DATA/diag.lua.
+SCRIPTS/F3X/DATA/diag.lua.
 
 Notes
 - S1 = coarse and S2 = fine adjustment (fixed). Keys 1-6 jump to channel 1-6. On MK2 the

@@ -1,5 +1,5 @@
--- RM Flightscreen, startes fra F3X-verktøyet: tider, link og flylogg under flyging (flight.lua).
-local toolName = "TNS|RM Flightscreen|TNE"
+-- RM Pilotoppsett, startes fra F3X-verktøyet: steg P alene. Profilen gjelder alle modellene.
+local toolName = "TNS|RM Pilotoppsett|TNE"
 
 local L
 local err
@@ -11,20 +11,20 @@ local function load(path)
 end
 
 local function init()
-  local libC, stdC, flightC = load("/SCRIPTS/RM/lib.lua"), load("/SCRIPTS/RM/std.lua"),
-    load("/SCRIPTS/RM/flight.lua")
+  local libC, stdC, pilotC = load("/SCRIPTS/F3X/lib.lua"), load("/SCRIPTS/F3X/std.lua"),
+    load("/SCRIPTS/F3X/pilot.lua")
   if err then return end
   L = libC()
   local STD = stdC()
-  local F = flightC()(L, STD)
+  local P = pilotC()(L, STD)
   L.initControls()
-  L.push(F.screen())
+  L.push(P.startScreen(function() L.quit() end))
 end
 
 local function run(event, touchState)
   if err then
     lcd.clear()
-    lcd.drawText(10, 10, "RM Flightscreen", MIDSIZE)
+    lcd.drawText(10, 10, "RM Pilotoppsett", MIDSIZE)
     lcd.drawText(10, 60, err, SMLSIZE)
     if event == EVT_VIRTUAL_EXIT then return 1 end
     return 0

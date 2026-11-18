@@ -1,6 +1,6 @@
 -- Steg P: pilotoppsett. Piloten velger brytere ved å flippe dem (skisse K),
 -- og ser over og endrer valgene før profilen lagres (skisse K2).
--- Én pilotprofil per radio, lagret i /SCRIPTS/RM/DATA/pilot.lua.
+-- Én pilotprofil per radio, lagret i /SCRIPTS/F3X/DATA/pilot.lua.
 
 return function(L, STD)
   local lcd = L.lcd   -- skalert på mindre skjermer (scale.lua)
@@ -215,7 +215,7 @@ return function(L, STD)
       -- Posisjonsfunksjon: vis valgt posisjon (fra profilen eller bryteren), ikke bare hvor bryteren står
       local p = (f.kind == "pos" and s.cur and s.cur.ctrl == c.key and s.cur.pos) or L.pos(v)
       local list
-      if c.type == "3pos" then list = { 1, 0, -1 } else list = { 1, -1 } end   -- OPP først
+      if c.type == "3pos" then list = { -1, 0, 1 } else list = { -1, 1 } end   -- NED, MIDT, OPP
       for i, q in ipairs(list) do
         local bx = x + (i - 1) * 150
         local lit = (q == p)
