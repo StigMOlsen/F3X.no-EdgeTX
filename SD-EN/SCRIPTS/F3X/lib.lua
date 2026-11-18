@@ -835,6 +835,7 @@ function L.run(event, touch)
     end
     for i, b in ipairs(list) do drawBtn(b, i == s.focus) end
   end
+  if s.after then s:after() end   -- tegnes over knappene (f.eks. stolper i pilotoversikten)
 
   if app.msg then
     if getTime() < app.msgUntil then

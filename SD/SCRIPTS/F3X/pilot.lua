@@ -391,18 +391,30 @@ return function(L, STD)
   ----------------------------------------------------------------------
   -- Skisse K2: oversikt, trykk på en rad for å endre, «Lagre profil»
 
-  -- Står kontrollen slik at funksjonen er på nå? (brytere: valgt posisjon, testbryter: inne)
+  -- Hva kontrollen gjør nå: on (bryter i funksjonens posisjon / testbryter inne), tekst med
+  -- verdi og endenavn (pot, skyvere, stikker, trim), og frac (-1..1) til stolpen.
   function P.live(f, a)
-    if not a or a.none or a.auto or a.trim or not a.ctrl then return nil end
+    if not a or a.none or a.auto then return nil end
+    if a.trim then
+      local id = L.trimSource(a.trim)
+      if not id then return nil end
+      local pct = L.round((getValue(id) or 0) / 10.24)
+      return nil, (pct > 0 and "+" or "") .. pct .. " %", pct / 100
+    end
+    if not a.ctrl then return nil end
     local c = L.ctrl(a.ctrl)
-    if not c then return nil end
+    if not (c and c.id) then return nil end
     local v = L.value(c)
-    if a.pos then return L.pos(v) == a.pos, nil end
-    if f.kind == "ctrl" then return L.pos(v) == 1, nil end
+    if a.pos then return L.pos(v) == a.pos end
+    if f.kind == "ctrl" then return L.pos(v) == 1 end
     if f.kind == "axis" then
       local pct = L.round(v / 10.24)
-      if a.rev then pct = -pct end
-      return nil, pct
+      local e = endName(f, a, v)
+      local txt = (pct > 0 and "+" or "") .. pct .. " %"
+      if e and e ~= "midt" then txt = txt .. " " .. e end
+      local fr = v / 1024
+      if a.rev then fr = -fr end
+      return nil, txt, fr
     end
     return nil
   end
@@ -410,20 +422,36 @@ return function(L, STD)
   function P.overviewScreen(prof, onSaved)
     local s = {}
 
+    -- Stolpe nederst i raden for pot, skyvere, stikker og trim: -100 .. +100 %, midt = 0
+    function s:after()
+      for _, b in ipairs(s.bars or {}) do
+        local x, y, w = b[1] + 10, b[2] + 32, 365
+        local mid = x + math.floor(w / 2)
+        lcd.drawFilledRectangle(x, y, w, 3, L.C.off)
+        lcd.drawFilledRectangle(mid, y - 1, 1, 5, L.C.dim)
+        local p = mid + math.floor(math.max(-1, math.min(1, b[3])) * w / 2)
+        lcd.drawFilledRectangle(math.min(mid, p), y, math.abs(p - mid) + 1, 3, L.C.act)
+      end
+    end
+
     function s:draw(list)
+      s.bars = {}
       L.header("Pilotoppsett - oversikt", "trykk på en rad for å endre")
       local n = #P.FUNCS
       local half = math.ceil(n / 2)
       for i, f in ipairs(P.FUNCS) do
         local col = (i <= half) and 0 or 1
         local row = (i <= half) and (i - 1) or (i - 1 - half)
-        local on = P.live(f, prof[f.key])
-        L.btn(list, 10 + col * 395, 58 + row * 42, 385, 38, f.label,
+        local on, txt, fr = P.live(f, prof[f.key])
+        local bx, by = 10 + col * 395, 58 + row * 42
+        L.btn(list, bx, by, 385, 38, f.label,
           function() L.push(P.selectScreen(prof, i, true)) end,
-          { left = true, right = P.describe(f, prof[f.key]), textColor = on and L.C.ok or nil })
+          { left = true, right = P.describe(f, prof[f.key]) .. (txt and ("  " .. txt) or ""),
+            textColor = on and L.C.ok or nil })
+        if fr then s.bars[#s.bars + 1] = { bx, by, fr } end
       end
       local y = 58 + half * 42 + 4
-      L.text(15, y, "Grønn = bryteren står slik at funksjonen er på nå. " ..
+      L.text(15, y, "Grønn = bryteren er på. Stolpen viser pot, skyver, stikke og trim. " ..
         "Normal (FM0): når ingen annen flymodus er på.", SMLSIZE, L.C.dim)
       local w = P.warnings(prof)
       if w[1] then L.text(15, y + 22, "! " .. w[1], SMLSIZE, L.C.warn) end
@@ -475,9 +503,9 @@ return function(L, STD)
         for i, f in ipairs(P.FUNCS) do
           local col = (i <= 7) and 0 or 1
           local row = (i <= 7) and (i - 1) or (i - 8)
-          local on, pct = P.live(f, p[f.key])
+          local on, val = P.live(f, p[f.key])
           local txt = f.label .. ": " .. P.describe(f, p[f.key])
-          if pct then txt = txt .. "  " .. (pct > 0 and "+" or "") .. pct .. " %" end
+          if val then txt = txt .. "  " .. val end
           L.text(30 + col * 390, y + row * 34, txt, 0, on and L.C.ok or L.C.text)
         end
         L.text(30, y + 7 * 34 + 4, "Grønn = bryteren står slik at funksjonen er på nå.", SMLSIZE, L.C.dim)
