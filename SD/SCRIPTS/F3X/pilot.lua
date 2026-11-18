@@ -355,25 +355,76 @@ return function(L, STD)
   ----------------------------------------------------------------------
   -- Skisse K2: oversikt, trykk på en rad for å endre, «Lagre profil»
 
+  -- Står kontrollen slik at funksjonen er på nå? (brytere: valgt posisjon, testbryter: inne)
+  function P.live(f, a)
+    if not a or a.none or a.auto or a.trim or not a.ctrl then return nil end
+    local c = L.ctrl(a.ctrl)
+    if not c then return nil end
+    local v = L.value(c)
+    if a.pos then return L.pos(v) == a.pos, nil end
+    if f.kind == "ctrl" then return L.pos(v) == 1, nil end
+    if f.kind == "axis" then
+      local pct = L.round(v / 10.24)
+      if a.rev then pct = -pct end
+      return nil, pct
+    end
+    return nil
+  end
+
   function P.overviewScreen(prof, onSaved)
-    local s = {}
+    local s = { top = 1 }
+    local VIS, ROW_H, Y0 = 6, 50, 56   -- 6 rader synlige, resten rulles fram
+
+    local function scroll(d)
+      local n = #P.FUNCS
+      s.top = math.max(1, math.min(math.max(1, n - VIS + 1), s.top + d))
+    end
+
+    -- Rullehjulet: ned/opp i listen og rull når markeringen går utenfor
+    function s:onEvent(e)
+      local n = #P.FUNCS
+      local sel = s.focus and s.focus <= math.min(VIS, n) and (s.top + s.focus - 1) or nil
+      if not sel then return false end
+      if e == EVT_VIRTUAL_NEXT and sel < n then
+        if sel + 1 > s.top + VIS - 1 then scroll(1) end
+        s.focus = sel + 1 - s.top + 1
+        return true
+      elseif e == EVT_VIRTUAL_PREV and sel > 1 then
+        if sel - 1 < s.top then scroll(-1) end
+        s.focus = sel - 1 - s.top + 1
+        return true
+      end
+      return false
+    end
 
     function s:draw(list)
       L.header("Pilotoppsett - oversikt", "trykk på en rad for å endre")
       local n = #P.FUNCS
-      local half = math.ceil(n / 2)
-      for i, f in ipairs(P.FUNCS) do
-        local col = (i <= half) and 0 or 1
-        local row = (i <= half) and (i - 1) or (i - 1 - half)
-        L.btn(list, 10 + col * 395, 58 + row * 42, 385, 38, f.label,
+      local last = math.min(n, s.top + VIS - 1)
+      for i = s.top, last do
+        local f = P.FUNCS[i]
+        local a = prof[f.key]
+        local on, pct = P.live(f, a)
+        local right = P.describe(f, a)
+        if pct then right = right .. "  " .. (pct > 0 and "+" or "") .. pct .. " %" end
+        L.btn(list, 10, Y0 + (i - s.top) * ROW_H, 700, ROW_H - 6, f.label,
           function() L.push(P.selectScreen(prof, i, true)) end,
-          { left = true, right = P.describe(f, prof[f.key]) })
+          { left = true, right = right, font = MIDSIZE, textColor = on and L.C.ok or nil })
       end
-      local y = 58 + half * 42 + 4
-      L.text(15, y, "Normal (FM0): aktiv når ingen annen flymodus er på.", SMLSIZE, L.C.dim)
-      for k, w in ipairs(P.warnings(prof)) do
-        if k <= 2 then L.text(15, y + 22 * k, "! " .. w, SMLSIZE, L.C.warn) end
-      end
+      -- Rullepiler og rullefelt til høyre
+      local h = VIS * ROW_H - 6
+      L.btn(list, 720, Y0, 70, 60, CHAR_UP or "Opp", s.top > 1 and function() scroll(-VIS) end or nil)
+      L.btn(list, 720, Y0 + h - 60, 70, 60, CHAR_DOWN or "Ned", last < n and function() scroll(VIS) end or nil)
+      local th = h - 130
+      local bh = math.max(20, math.floor(th * VIS / n))
+      local by = Y0 + 65 + math.floor((th - bh) * (s.top - 1) / math.max(1, n - VIS))
+      lcd.drawFilledRectangle(752, Y0 + 65, 6, th, L.C.track or L.C.off)
+      lcd.drawFilledRectangle(750, by, 10, bh, L.C.act)
+      local y = Y0 + VIS * ROW_H + 2
+      L.text(15, y, "Grønn = bryteren står slik at funksjonen er på nå. " ..
+        "Normal (FM0): når ingen annen flymodus er på.", SMLSIZE, L.C.dim)
+      local w = P.warnings(prof)
+      if w[1] then L.text(15, y + 22, "! " .. w[1], SMLSIZE, L.C.warn) end
       L.btnRow(list, {
         { "Avbryt", function() L.pop() end },
         { "Kanaler", function() L.push(P.channelScreen(prof)) end },
@@ -422,8 +473,12 @@ return function(L, STD)
         for i, f in ipairs(P.FUNCS) do
           local col = (i <= 7) and 0 or 1
           local row = (i <= 7) and (i - 1) or (i - 8)
-          L.text(30 + col * 390, y + row * 30, f.label .. ": " .. P.describe(f, p[f.key]), SMLSIZE)
+          local on, pct = P.live(f, p[f.key])
+          local txt = f.label .. ": " .. P.describe(f, p[f.key])
+          if pct then txt = txt .. "  " .. (pct > 0 and "+" or "") .. pct .. " %" end
+          L.text(30 + col * 390, y + row * 34, txt, 0, on and L.C.ok or L.C.text)
         end
+        L.text(30, y + 7 * 34 + 4, "Grønn = bryteren står slik at funksjonen er på nå.", SMLSIZE, L.C.dim)
         items = {
           { "Tilbake", function() L.pop() end },
           { "Endre enkeltvalg", function() L.push(P.overviewScreen(p, done)) end },

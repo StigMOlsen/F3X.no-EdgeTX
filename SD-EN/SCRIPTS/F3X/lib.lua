@@ -700,7 +700,7 @@ function L.btn(list, x, y, w, h, text, fn, opts)
   list[#list + 1] = { x = x, y = y, w = w, h = h, text = text, fn = fn,
     enabled = opts.enabled ~= false and fn ~= nil, color = opts.color,
     left = opts.left, right = opts.right, primary = opts.primary, hidden = opts.hidden, icon = opts.icon,
-    warn = opts.warn, default = opts.default }
+    warn = opts.warn, default = opts.default, font = opts.font, textColor = opts.textColor }
 end
 
 -- Knapperad nederst, like brede knapper. Siste knapp er hovedknappen (oransje),
@@ -733,8 +733,10 @@ local function drawBtn(b, focused)
   local fr = (focused and on) and (b.primary and L.C.headText or L.C.act) or (on and L.C.edge or L.C.btn)
   lcd.drawRectangle(b.x, b.y, b.w, b.h, fr)
   if focused and on then lcd.drawRectangle(b.x + 1, b.y + 1, b.w - 2, b.h - 2, fr) end
-  local fc = on and (b.primary and L.C.headText or L.C.text) or L.C.dim
-  local ty = b.y + math.floor(b.h / 2) - 11
+  local fc = on and (b.textColor or (b.primary and L.C.headText or L.C.text)) or L.C.dim
+  local font = b.font or 0
+  local ty = b.y + math.floor(b.h / 2) - (font == MIDSIZE and 14 or 11)
+  fc = fc + font
   local tx = b.x + 10
   if b.icon then
     L.image("f3x_btn.png", tx, b.y + math.floor((b.h - 24) / 2))
