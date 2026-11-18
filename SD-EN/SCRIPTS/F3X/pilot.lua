@@ -393,8 +393,20 @@ return function(L, STD)
 
   -- Hva kontrollen gjør nå: on (bryter i funksjonens posisjon / testbryter inne), tekst med
   -- verdi og endenavn (pot, skyvere, stikker, trim), og frac (-1..1) til stolpen.
-  function P.live(f, a)
-    if not a or a.none or a.auto then return nil end
+  function P.live(f, a, prof)
+    if not a or a.none then return nil end
+    -- Landing automatisk: på når crow er trukket forbi grensen, samme regel som L1 i setup.lua
+    if a.auto then
+      local cr = prof and prof.crow
+      local c = cr and L.ctrl(cr.ctrl)
+      if not (c and c.id) then return nil end
+      local V = STD.values
+      local xd = 100 - 2 * V.crowDead
+      local e = xd - V.landingCrow * (xd + 100) / 100
+      local pct = L.value(c) / 10.24
+      if cr.rev then return pct > -e end
+      return pct < e
+    end
     if a.trim then
       local id = L.trimSource(a.trim)
       if not id then return nil end
@@ -419,19 +431,21 @@ return function(L, STD)
     return nil
   end
 
+  -- Stolpe for stillingen til pot, skyver, stikke eller trim: -100 .. +100 %, strek i midten
+  function P.bar(x, y, w, fr)
+    local mid = x + math.floor(w / 2)
+    lcd.drawFilledRectangle(x, y, w, 3, L.C.off)
+    lcd.drawFilledRectangle(mid, y - 1, 1, 5, L.C.dim)
+    local p = mid + math.floor(math.max(-1, math.min(1, fr)) * w / 2)
+    lcd.drawFilledRectangle(math.min(mid, p), y, math.abs(p - mid) + 1, 3, L.C.act)
+  end
+
   function P.overviewScreen(prof, onSaved)
     local s = {}
 
-    -- Stolpe nederst i raden for pot, skyvere, stikker og trim: -100 .. +100 %, midt = 0
+    -- Stolpe nederst i raden for pot, skyvere, stikker og trim
     function s:after()
-      for _, b in ipairs(s.bars or {}) do
-        local x, y, w = b[1] + 10, b[2] + 32, 365
-        local mid = x + math.floor(w / 2)
-        lcd.drawFilledRectangle(x, y, w, 3, L.C.off)
-        lcd.drawFilledRectangle(mid, y - 1, 1, 5, L.C.dim)
-        local p = mid + math.floor(math.max(-1, math.min(1, b[3])) * w / 2)
-        lcd.drawFilledRectangle(math.min(mid, p), y, math.abs(p - mid) + 1, 3, L.C.act)
-      end
+      for _, b in ipairs(s.bars or {}) do P.bar(b[1] + 10, b[2] + 32, 365, b[3]) end
     end
 
     function s:draw(list)
@@ -442,17 +456,15 @@ return function(L, STD)
       for i, f in ipairs(P.FUNCS) do
         local col = (i <= half) and 0 or 1
         local row = (i <= half) and (i - 1) or (i - 1 - half)
-        local on, txt, fr = P.live(f, prof[f.key])
+        local on, _, fr = P.live(f, prof[f.key], prof)
         local bx, by = 10 + col * 395, 58 + row * 42
         L.btn(list, bx, by, 385, 38, f.label,
           function() L.push(P.selectScreen(prof, i, true)) end,
-          { left = true, right = P.describe(f, prof[f.key]) .. (txt and ("  " .. txt) or ""),
-            textColor = on and L.C.ok or nil })
+          { left = true, right = P.describe(f, prof[f.key]), textColor = on and L.C.ok or nil })
         if fr then s.bars[#s.bars + 1] = { bx, by, fr } end
       end
       local y = 58 + half * 42 + 4
-      L.text(15, y, "Green = switch is on. The bar shows pot, slider, stick and trim. " ..
-        "Normal (FM0): when no other flight mode is on.", SMLSIZE, L.C.dim)
+      L.text(15, y, "Normal (FM0): active when no other flight mode is on.", SMLSIZE, L.C.dim)
       local w = P.warnings(prof)
       if w[1] then L.text(15, y + 22, "! " .. w[1], SMLSIZE, L.C.warn) end
       L.btnRow(list, {
@@ -503,12 +515,11 @@ return function(L, STD)
         for i, f in ipairs(P.FUNCS) do
           local col = (i <= 7) and 0 or 1
           local row = (i <= 7) and (i - 1) or (i - 8)
-          local on, val = P.live(f, p[f.key])
-          local txt = f.label .. ": " .. P.describe(f, p[f.key])
-          if val then txt = txt .. "  " .. val end
-          L.text(30 + col * 390, y + row * 34, txt, 0, on and L.C.ok or L.C.text)
+          local on, _, fr = P.live(f, p[f.key], p)
+          local tx, ty = 30 + col * 390, y + row * 34
+          L.text(tx, ty, f.label .. ": " .. P.describe(f, p[f.key]), 0, on and L.C.ok or L.C.text)
+          if fr then P.bar(tx, ty + 24, 340, fr) end
         end
-        L.text(30, y + 7 * 34 + 4, "Green = the switch is set so the function is on now.", SMLSIZE, L.C.dim)
         items = {
           { "Back", function() L.pop() end },
           { "Change one item", function() L.push(P.overviewScreen(p, done)) end },
