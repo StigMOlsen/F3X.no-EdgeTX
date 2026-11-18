@@ -104,6 +104,14 @@ return function(L, STD, W, S)
     -- Tilbake fra en underskjerm (def.extra): sett opp testmikser og pot på nytt, samme verdi
     function s:resume() s:enter() end
 
+    -- def.toggle: bytt til en annen liste verdier på samme skjerm (f.eks. Expo <-> Differensial)
+    local function reload()
+      if #s.entries > 0 then commit() end
+      s.entries = def.entries(s.st, s.prof)
+      s.k = 1
+      if #s.entries > 0 then setup() end
+    end
+
     function s:tick()
       if #s.entries == 0 then return end
       if def.select then
@@ -177,7 +185,11 @@ return function(L, STD, W, S)
       if #s.entries == 0 then
         L.header(def.title)
         L.text(20, 70, def.empty or "Nothing to adjust for this model.")
-        L.btnRow(list, { { "Back", function() L.pop() end } })
+        local items = { { "Back", function() L.pop() end } }
+        if def.toggle and def.toggle.show(s.st, s.prof) then
+          items[#items + 1] = { def.toggle.label(), function() def.toggle.fn(); reload() end }
+        end
+        L.btnRow(list, items)
         return
       end
       local e = cur()
@@ -186,7 +198,10 @@ return function(L, STD, W, S)
       local roles = e.roles or {}
       local col = {}
       for _, r in ipairs(roles) do col[r] = G.C.act end
-      local hits = W.plane(s.st.cfg, { color = col, active = roles[1] })
+      local picks = {}
+      for k, x in ipairs(s.entries) do if x.pick then picks[#picks + 1] = { k, x.pick } end end
+      if #picks < 2 then picks = {} end   -- bare én å velge mellom (kryss-hale): ingen knapper
+      local hits = W.plane(s.st.cfg, { color = col, active = roles[1], caption = #picks == 0 and nil or false })
       -- Høyre side: navn, verdi, flymodus, hjelpetekst og grafikk
       local _, h = L.fit(430, 56, e.label, 360, { MIDSIZE, 0, SMLSIZE })
       local vt = e.fmt and e.fmt(s.val) or (s.val .. " " .. (e.unit or "%"))
@@ -236,6 +251,9 @@ return function(L, STD, W, S)
           L.push(x)
         end, { primary = false } }
       end
+      if def.toggle and def.toggle.show(s.st, s.prof) then
+        items[#items + 1] = { def.toggle.label(), function() def.toggle.fn(); reload() end, { primary = false } }
+      end
       if e.fm then
         items[#items + 1] = { "Copy to all FM", function()
           commit()
@@ -254,6 +272,16 @@ return function(L, STD, W, S)
         items[#items + 1] = { last and "Done" or "Confirm", function() confirm() end }
       end
       L.btnRow(list, items)
+      -- Velgerknapper under flyfiguren (e.pick): én per verdi, valgt er oransje
+      if #picks > 0 then
+        local bw = math.floor((390 - 10 * (#picks - 1)) / #picks)
+        for i, p in ipairs(picks) do
+          local k = p[1]
+          L.btn(list, 12 + (i - 1) * (bw + 10), 342, bw, 34, p[2], function()
+            if k ~= s.k then commit(); s.k = k; setup() end
+          end, { color = k == s.k and L.C.act or nil, default = k == s.k })
+        end
+      end
       -- Trykk på et ror: hopp til første verdi for det roret
       if not def.select then
         W.planeHits(list, hits, function(role)
@@ -834,26 +862,41 @@ return function(L, STD, W, S)
   -- Differensial-trim og expo (bestemt 2026-10-29). Differensial: hvor mye av utslaget ned trimmen kan endre.
   -- Aileron med T3 (egen verdi per FM), V-hale (sideroret) med T5 (lik i alle FM).
   local function diffScreen()
-    local def = { title = "Differential and expo", doneText = "Differential and expo saved" }
+    -- Expo er standard. Knappen nederst bytter til differensial; der velges vinge eller V-hale
+    -- med knappene under flyfiguren.
+    local mode = "expo"
+    local TITLE = { expo = "Expo", diff = "Differential" }
+    local def = { title = TITLE[mode], doneText = "Differential and expo saved" }
     local trims = {}
+    local function hasDiff(prof)
+      return (prof.difftrim and L.trimSource(prof.difftrim.trim)) ~= nil
+    end
+    def.toggle = {
+      show = function(_, prof) return hasDiff(prof) end,
+      label = function() return mode == "expo" and "Differential" or "Expo" end,
+      fn = function() mode = mode == "expo" and "diff" or "expo"; def.title = TITLE[mode] end,
+    }
     function def.entries(st, prof)
       local list = {}
-      local function entry(kind, key, pf, label, roles, what)
+      local function entry(kind, key, pf, label, roles, what, pick)
         local t = pf and pf.trim
         local id = t and L.trimSource(t)
         if not id then return end
         trims[kind] = { label = t, id = id }
         list[#list + 1] = {
-          label = label, min = 0, max = 100, span = 50, roles = roles, kind = kind,
+          label = label, min = 0, max = 100, span = 50, roles = roles, kind = kind, pick = pick,
           fmt = function(v) return v .. " % of the throw" end,
           hint = { t .. " at full changes " .. what .. " down by that", "much, one way or the other. Default " .. V[key] .. " %." },
           get = function() return st.adj[key] end,
           set = function(_, v) st.adj[key] = v; S.applyDiff(st, prof, kind) end,
         }
       end
-      entry("ail", "diffTrim", prof.difftrim, "Aileron differential", { "ailL", "ailR" }, "aileron")
-      if st.cfg.tail == "V" then
-        entry("rud", "vdiffTrim", prof.vdifftrim, "V-tail differential", { "vL", "vR" }, "the rudder")
+      if mode == "diff" then
+        entry("ail", "diffTrim", prof.difftrim, "Aileron differential", { "ailL", "ailR" }, "aileron", "Wing")
+        if st.cfg.tail == "V" then
+          entry("rud", "vdiffTrim", prof.vdifftrim, "V-tail differential", { "vL", "vR" }, "the rudder", "V-tail")
+        end
+        return list
       end
       -- Expo, lik i alle FM: negativ = mykt rundt senter (butterfly: mykt i starten av crow)
       local function expo(f, label, roles, crow)
@@ -894,6 +937,7 @@ return function(L, STD, W, S)
       L.text(x, y, t.label .. " now: " .. tr .. " %  =  " .. L.round(tr * s.val / 100) .. " % of the down throw", SMLSIZE)
     end
     def.empty = "Choose a trim button for differential in Pilot setup."
+    def.leave = function() mode = "expo"; def.title = TITLE[mode] end
     return A.adjustScreen(def)
   end
 
@@ -1014,7 +1058,112 @@ return function(L, STD, W, S)
   end
 
   ----------------------------------------------------------------------
-  -- Steg 7: sjekkliste for det som ikke kan settes fra Lua, og telemetri
+  -- Steg 7: failsafe. ELRS lagrer failsafe i mottakeren, og «Set Failsafe Pos» tar kanalene
+  -- slik de står. Mens skjermen er åpen holder testmikser alle ror i nøytral og motoren av, og
+  -- Lagre i mottakeren sender kommandoen (crsf.lua). Virker ikke det, viser tabellen µs-verdiene
+  -- som kan tastes inn på mottakerens web-side.
+
+  function A.failsafeScreen()
+    local s = {}
+    local MAXS = L.findSource({ "max", "MAX" })
+    local CR = loadScript("/SCRIPTS/RM/crsf.lua")()
+
+    function s:enter()
+      s.st = W.state()
+      s.st.check = s.st.check or {}
+      s.chs = W.channels(s.st.cfg, true)
+      L.sort(s.chs, function(a, b) return a.ch < b.ch end)
+      for _, c in ipairs(s.chs) do L.tmpClear(c.ch) end
+      W.makeRoom(s)
+      s.full = false
+      for _, c in ipairs(s.chs) do
+        -- Ror 0 = nøytral (senter og subtrim fra steg 2), motor -100 % = av (endepunktet)
+        if not (MAXS and L.tmpAdd(c.ch, MAXS, c.role == "motor" and -100 or 0, 0)) then s.full = true end
+      end
+    end
+
+    function s:leave()
+      for _, c in ipairs(s.chs or {}) do L.tmpClear(c.ch) end
+      W.restoreRoom(s)
+      s.job = nil
+    end
+
+    function s:tick()
+      if s.job and CR.tick(s.job) and s.job.state == "done" and not s.saved then
+        s.saved = true
+        s.st.fsSaved = true
+        W.saveState()
+      end
+    end
+
+    -- Pulsbredden kanalen gir nå (ca.): 1500 + PPM-senter + verdi/2 µs
+    local function us(ch)
+      local id = L.findSource({ "ch" .. ch, "CH" .. ch })
+      local o = model.getOutput(ch - 1)
+      local v = id and getValue(id) or 0
+      return L.round(1500 + ((o and o.ppmCenter) or 0) + v / 2)
+    end
+
+    local function tele(name)
+      local id = L.findSource({ name })
+      local v = id and getValue(id)
+      return v and tostring(v) or "-"
+    end
+
+    function s:draw(list)
+      local tested = s.st.check.failsafe
+      L.header("7 - Failsafe", tested and "tested" or "")
+      local y = 56
+      local function t(txt, col) L.text(20, y, txt, SMLSIZE, col or L.C.text); y = y + 21 end
+      t("Failsafe is what the receiver does when the signal from the radio is lost.", L.C.act)
+      t("ELRS goes to failsafe after about 1 s without signal. The values are stored in", L.C.dim)
+      t("the receiver, so failsafe in EdgeTX (model setup) is not used.", L.C.dim)
+      t("Before the first connection the receiver gives no pulses.", L.C.dim)
+      t("Here: motor off and all surfaces neutral (they are held there now).", L.C.dim)
+      y = y + 6
+      t("1. Receiver on and bound. REMOVE THE PROPELLER.")
+      t("2. Press Save to receiver.")
+      t("3. Test: switch off the radio. Within about 1 s the motor must stop")
+      t("    and the surfaces go neutral. Switch on again, press Tested OK.")
+      y = y + 6
+      if s.job then
+        local ok = s.job.state == "done"
+        local bad = s.job.state == "notfound" or s.job.state == "noreply" or s.job.state == "nocrsf"
+        t(s.job.text or "", ok and L.C.ok or (bad and L.C.warn or L.C.text))
+      elseif s.st.fsSaved then
+        t("Saved to the receiver before. Save again after changes in step 2.", L.C.dim)
+      end
+      if s.full then t("Mix limit: not all surfaces are held. Do not save now.", L.C.warn) end
+      -- Til høyre: verdiene som lagres (til web-siden hvis kommandoen ikke virker)
+      L.text(560, 56, "Failsafe values", 0, L.C.dim)
+      for i, c in ipairs(s.chs) do
+        L.text(560, 60 + i * 22, "CH" .. c.ch .. "  " .. c.name, SMLSIZE)
+        L.text(780, 60 + i * 22, us(c.ch) .. " µs", SMLSIZE + RIGHT)
+      end
+      local yy = 70 + (#s.chs + 1) * 22
+      L.text(560, yy, "RQly: " .. tele("RQly") .. " %", SMLSIZE)
+      L.text(560, yy + 24, "Save not working? Enter the values", SMLSIZE, L.C.dim)
+      L.text(560, yy + 46, "on the receiver's web page.", SMLSIZE, L.C.dim)
+      local st8 = s.job and s.job.state
+      local busy = st8 and st8 ~= "done" and st8 ~= "notfound" and st8 ~= "noreply" and st8 ~= "nocrsf"
+      L.btnRow(list, {
+        { "Back", function() L.pop() end },
+        { "Save to receiver", function()
+          s.saved = false
+          s.job = CR.new(function(n) return string.find(string.lower(n), "failsafe", 1, true) ~= nil end)
+        end, { enabled = not busy and not s.full, primary = false } },
+        { tested and "Not tested" or "Tested OK", function()
+          s.st.check.failsafe = not tested or nil
+          W.saveState()
+        end },
+      })
+    end
+
+    return s
+  end
+
+  ----------------------------------------------------------------------
+  -- Steg 8: sjekkliste for det som ikke kan settes fra Lua, og telemetri
 
   A.CHECKS = {
     { "bind", "Receiver bound (ELRS)" },
@@ -1024,7 +1173,7 @@ return function(L, STD, W, S)
     { "bindsto", "ELRS RX: Bind Storage = Persistent" },
     { "arm", "Arm using: Switch, ON (CH5 becomes normal)" },
     { "ext", "Extended limits on (MODEL SETUP)" },
-    { "failsafe", "Failsafe: Custom, motor -100 %, surfaces neutral" },
+    { "failsafe", "Failsafe set and tested (menu 7)" },
     { "swwarn", "Throttle warning off, motor switch Off at start" },
     { "sounds", "Sound files are in /SOUNDS/<language>/" },
   }
@@ -1051,7 +1200,7 @@ return function(L, STD, W, S)
     end
 
     function s:draw(list)
-      L.header("7 - Checklist", A.checkDone(s.st) .. " / " .. #A.CHECKS)
+      L.header("8 - Checklist", A.checkDone(s.st) .. " / " .. #A.CHECKS)
       for i, c in ipairs(A.CHECKS) do
         local on = s.st.check[c[1]]
         L.btn(list, 20, 56 + (i - 1) * 35, 520, 32, (on and "[x]  " or "[ ]  ") .. c[2], function()

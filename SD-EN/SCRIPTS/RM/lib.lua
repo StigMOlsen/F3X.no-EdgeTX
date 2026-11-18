@@ -59,7 +59,8 @@ L.TRIMS = { "T1", "T2", "T3", "T4", "T5", "T6" }
 L.TYPE_LABEL = { ["3pos"] = "3-pos", ["2pos"] = "2-pos", mom = "momentary",
                  pot = "pot", slider = "slider", stick = "stick" }
 
-L.POS = { [-1] = "UP", [0] = "MID", [1] = "DOWN" }
+-- Bryterverdi -1024 er NED på TX16S MK3 (bekreftet av Stig 2026-11-18), +1024 er OPP
+L.POS = { [-1] = "DOWN", [0] = "MID", [1] = "UP" }
 
 function L.findSource(names)
   for _, n in ipairs(names) do

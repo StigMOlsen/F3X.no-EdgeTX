@@ -229,7 +229,8 @@ return function(L, STD, P)
           ready and motor },
         { "5   Skriv oppsett", d.mix and "skrevet" or "-", push(W.S.writeScreen), ready },
         { "6   Justering", d.mix and "" or "etter 5", push(W.A.menuScreen, true), ready and d.mix, true },
-        { "7   Sjekkliste", ready and (W.A.checkDone(st) .. " / " .. #W.A.CHECKS) or "", push(W.A.checkScreen), ready },
+        { "7   Failsafe", (st.check and st.check.failsafe) and "testet" or "-", push(W.A.failsafeScreen), ready and d.mix },
+        { "8   Sjekkliste", ready and (W.A.checkDone(st) .. " / " .. #W.A.CHECKS) or "", push(W.A.checkScreen), ready },
       }
       local colW = math.floor((L.W - 50) / 2)
       for i, r in ipairs(rows) do

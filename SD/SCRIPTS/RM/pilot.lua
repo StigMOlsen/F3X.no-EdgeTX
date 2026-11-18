@@ -215,7 +215,7 @@ return function(L, STD)
       -- Posisjonsfunksjon: vis valgt posisjon (fra profilen eller bryteren), ikke bare hvor bryteren står
       local p = (f.kind == "pos" and s.cur and s.cur.ctrl == c.key and s.cur.pos) or L.pos(v)
       local list
-      if c.type == "3pos" then list = { -1, 0, 1 } else list = { -1, 1 } end
+      if c.type == "3pos" then list = { 1, 0, -1 } else list = { 1, -1 } end   -- OPP først
       for i, q in ipairs(list) do
         local bx = x + (i - 1) * 150
         local lit = (q == p)
