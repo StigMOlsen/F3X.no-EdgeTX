@@ -515,10 +515,7 @@ return function(L, STD)
         for i, f in ipairs(P.FUNCS) do
           local col = (i <= 7) and 0 or 1
           local row = (i <= 7) and (i - 1) or (i - 8)
-          local on, _, fr = P.live(f, p[f.key], p)
-          local tx, ty = 30 + col * 390, y + row * 34
-          L.text(tx, ty, f.label .. ": " .. P.describe(f, p[f.key]), 0, on and L.C.ok or L.C.text)
-          if fr then P.bar(tx, ty + 24, 340, fr) end
+          L.text(30 + col * 390, y + row * 34, f.label .. ": " .. P.describe(f, p[f.key]), 0)
         end
         items = {
           { "Tilbake", function() L.pop() end },
