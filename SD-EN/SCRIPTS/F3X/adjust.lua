@@ -1059,40 +1059,73 @@ return function(L, STD, W, S)
 
   ----------------------------------------------------------------------
   -- Steg 7: failsafe. ELRS lagrer failsafe i mottakeren, og «Set Failsafe Pos» tar kanalene
-  -- slik de står. Mens skjermen er åpen holder testmikser alle ror i nøytral og motoren av, og
-  -- Lagre i mottakeren sender kommandoen (crsf.lua). Virker ikke det, viser tabellen µs-verdiene
-  -- som kan tastes inn på mottakerens web-side.
+  -- slik de står. Mens skjermen er åpen holder testmikser rorene i failsafe-stillingen og
+  -- motoren av. Stillingen per ror velges ved å trykke på roret i listen til høyre og justere
+  -- med S1 (grovt) og S2 (fint), i % av utslaget (0 = nøytral). Den lagres i oppsettet
+  -- (st.fsPos). Lagre i mottakeren sender kommandoen (crsf.lua). Virker ikke det, viser
+  -- tabellen µs-verdiene som kan tastes inn på mottakerens web-side.
 
   function A.failsafeScreen()
     local s = {}
     local MAXS = L.findSource({ "max", "MAX" })
     local CR = loadScript("/SCRIPTS/F3X/crsf.lua")()
 
+    -- Testmiks for én kanal: ror i valgt stilling, motor -100 % = av (endepunktet)
+    local function hold(c)
+      L.tmpClear(c.ch)
+      local w = c.role == "motor" and -100 or (s.pos[c.ch] or 0)
+      return MAXS and L.tmpAdd(c.ch, MAXS, w, 0)
+    end
+
     function s:enter()
       s.st = W.state()
       s.st.check = s.st.check or {}
+      s.st.fsPos = s.st.fsPos or {}
+      s.pos = s.st.fsPos
       s.chs = W.channels(s.st.cfg, true)
       L.sort(s.chs, function(a, b) return a.ch < b.ch end)
       for _, c in ipairs(s.chs) do L.tmpClear(c.ch) end
       W.makeRoom(s)
       s.full = false
       for _, c in ipairs(s.chs) do
-        -- Ror 0 = nøytral (senter og subtrim fra steg 2), motor -100 % = av (endepunktet)
-        if not (MAXS and L.tmpAdd(c.ch, MAXS, c.role == "motor" and -100 or 0, 0)) then s.full = true end
+        if not hold(c) then s.full = true end
       end
+      s.dual = L.dualNew()
+      s.sel = nil
     end
 
     function s:leave()
       for _, c in ipairs(s.chs or {}) do L.tmpClear(c.ch) end
       W.restoreRoom(s)
       s.job = nil
+      W.saveState()
+    end
+
+    local function select(c)
+      s.sel = c
+      s.base = s.pos[c.ch] or 0
+      L.dualStart(s.dual, true)
     end
 
     function s:tick()
       if s.job and CR.tick(s.job) and s.job.state == "done" and not s.saved then
         s.saved = true
+        s.changed = false
         s.st.fsSaved = true
         W.saveState()
+      end
+      local c = s.sel
+      if not c then return end
+      -- Grovt: hele området (±100 %) over halv vandring. Fint: 10 %.
+      local d = L.dualDelta(s.dual, 10, 100)
+      if not d then return end
+      local v = s.base + L.round(d)
+      local cv = L.clamp(v, -100, 100)
+      if cv ~= v then s.base = cv; L.dualRebase(s.dual) end   -- ved grensen: følg kontrollene tilbake
+      if cv ~= (s.pos[c.ch] or 0) then
+        s.pos[c.ch] = cv ~= 0 and cv or nil
+        if not hold(c) then s.full = true end
+        s.changed = true
       end
     end
 
@@ -1118,13 +1151,13 @@ return function(L, STD, W, S)
       t("Failsafe is what the receiver does when the signal from the radio is lost.", L.C.act)
       t("ELRS goes to failsafe after about 1 s without signal. The values are stored in", L.C.dim)
       t("the receiver, so failsafe in EdgeTX (model setup) is not used.", L.C.dim)
-      t("Before the first connection the receiver gives no pulses.", L.C.dim)
-      t("Here: motor off and all surfaces neutral (they are held there now).", L.C.dim)
+      t("The surfaces are held in the failsafe position now. The motor is always off.", L.C.dim)
       y = y + 6
       t("1. Receiver on and bound. REMOVE THE PROPELLER.")
-      t("2. Press Save to receiver.")
-      t("3. Test: switch off the radio. Within about 1 s the motor must stop")
-      t("    and the surfaces go neutral. Switch on again, press Tested OK.")
+      t("2. Tap a surface on the right and set it with " .. L.dualLabel(s.dual) .. ".")
+      t("3. Press Save to receiver.")
+      t("4. Test: switch off the radio. Within about 1 s the motor must stop")
+      t("    and the surfaces go to the failsafe position. Switch on, press Tested OK.")
       y = y + 6
       if s.job then
         local ok = s.job.state == "done"
@@ -1133,12 +1166,24 @@ return function(L, STD, W, S)
       elseif s.st.fsSaved then
         t("Saved to the receiver before. Save again after changes in step 2.", L.C.dim)
       end
+      if s.changed then t("Position changed: press Save to receiver.", L.C.act) end
       if s.full then t("Mix limit: not all surfaces are held. Do not save now.", L.C.warn) end
-      -- Til høyre: verdiene som lagres (til web-siden hvis kommandoen ikke virker)
+      if s.sel then
+        if not L.dualWait(s.dual, 20, y) then L.dualHint(s.dual, 20, y) end
+      end
+      -- Til høyre: stilling og verdiene som lagres (til web-siden hvis kommandoen ikke virker)
       L.text(560, 56, "Failsafe values", 0, L.C.dim)
       for i, c in ipairs(s.chs) do
-        L.text(560, 60 + i * 22, "CH" .. c.ch .. "  " .. c.name, SMLSIZE)
-        L.text(780, 60 + i * 22, us(c.ch) .. " µs", SMLSIZE + RIGHT)
+        local ry = 60 + i * 22
+        local motor = c.role == "motor"
+        if s.sel == c then lcd.drawFilledRectangle(554, ry - 2, 236, 22, L.C.focus) end
+        L.text(560, ry, "CH" .. c.ch .. "  " .. c.name, SMLSIZE)
+        L.text(712, ry, motor and "off" or ((s.pos[c.ch] or 0) .. " %"), SMLSIZE + RIGHT,
+          (motor or (s.pos[c.ch] or 0) == 0) and L.C.dim or L.C.act)
+        L.text(780, ry, us(c.ch) .. " µs", SMLSIZE + RIGHT)
+        if not motor then
+          L.btn(list, 554, ry - 2, 236, 22, "#fs" .. c.ch, function() select(c) end, { hidden = true })
+        end
       end
       local yy = 70 + (#s.chs + 1) * 22
       L.text(560, yy, "RQly: " .. tele("RQly") .. " %", SMLSIZE)
@@ -1148,8 +1193,16 @@ return function(L, STD, W, S)
       local busy = st8 and st8 ~= "done" and st8 ~= "notfound" and st8 ~= "noreply" and st8 ~= "nocrsf"
       L.btnRow(list, {
         { "Back", function() L.pop() end },
+        { "All neutral", function()
+          for k in pairs(s.pos) do s.pos[k] = nil end
+          s.full = false
+          for _, c in ipairs(s.chs) do if not hold(c) then s.full = true end end
+          if s.sel then select(s.sel) end
+          s.changed = true
+        end, { enabled = next(s.pos) ~= nil } },
         { "Save to receiver", function()
           s.saved = false
+          W.saveState()
           s.job = CR.new(function(n) return string.find(string.lower(n), "failsafe", 1, true) ~= nil end)
         end, { enabled = not busy and not s.full, primary = false } },
         { tested and "Not tested" or "Tested OK", function()
