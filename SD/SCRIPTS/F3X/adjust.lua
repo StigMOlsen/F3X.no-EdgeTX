@@ -872,7 +872,7 @@ return function(L, STD, W, S)
       return (prof.difftrim and L.trimSource(prof.difftrim.trim)) ~= nil
     end
     def.toggle = {
-      show = function(_, prof) return hasDiff(prof) end,
+      show = function(st, prof) return hasDiff(prof) or (st and st.cfg and st.cfg.thermal) end,
       label = function() return mode == "expo" and "Differensial" or "Expo" end,
       fn = function() mode = mode == "expo" and "diff" or "expo"; def.title = TITLE[mode] end,
     }
@@ -893,6 +893,30 @@ return function(L, STD, W, S)
       end
       if mode == "diff" then
         entry("ail", "diffTrim", prof.difftrim, "Aileron-differensial", { "ailL", "ailR" }, "aileron", "Vinge")
+        -- Differensial etter camber i Termikk (Stig 2026-11-25): satt ved min og maks camber,
+        -- lineært imellom. Vises som total differensial (steg 4 + ekstra); T3 kommer i tillegg.
+        if st.cfg.thermal then
+          local base = S.baseDiff(st)
+          local hasCam = prof.camber and L.ctrl(prof.camber.ctrl)
+          local function cam(key, label, other)
+            list[#list + 1] = {
+              label = label, min = 0, max = 100, span = 50, roles = { "ailL", "ailR" },
+              fmt = function(v) return v .. " %  (ned = " .. (100 - v) .. " % av opp)" end,
+              hint = { "Steg 4 gir " .. base .. " %. " .. other, "Normal og Speed som steg 4. T3 kommer i tillegg." },
+              graph = function(v)
+                local lo = key == "camDiffMin" and v or base + st.adj.camDiffMin
+                local hi = key == "camDiffMax" and v or base + st.adj.camDiffMax
+                return { { -100, lo }, { 100, hi } }, { range = 100 }
+              end,
+              get = function() return base + st.adj[key] end,
+              set = function(_, v) st.adj[key] = v - base; S.applyCamDiff(st, prof) end,
+            }
+          end
+          if hasCam then
+            cam("camDiffMin", "Termikk: diff. ved min camber", "Lineært opp til maks camber.")
+          end
+          cam("camDiffMax", "Termikk: diff. ved maks camber", hasCam and "Lineært ned til min camber." or "Uten camber-kontroll: alltid maks.")
+        end
         if st.cfg.tail == "V" then
           entry("rud", "vdiffTrim", prof.vdifftrim, "V-hale-differensial", { "vL", "vR" }, "sideroret", "V-hale")
         end

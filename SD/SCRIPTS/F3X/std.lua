@@ -114,6 +114,9 @@ return {
     crowDead = 5,       -- % av Throttle-vandringen fra crow av uten crow (B3)
     crowRed = 60,       -- % aileron-utslag ved full crow (B2)
     crowDiff = 100,     -- % ned-aileron ved full crow (100 = som uten crow, 0 = ingen ned-aileron)
+    -- Differensial etter camber (Stig 2026-11-25): ekstra differensial (prosentpoeng av opp-
+    -- utslaget, i tillegg til steg 4) ved min og maks camber i Termikk, lineært imellom.
+    camDiffMin = 0, camDiffMax = 0,
     potSpan = 100,      -- % endring over halv pot-vandring i justeringene (testperioden: stort)
     landingCrow = 10,   -- % crow som slår på Landing (FM1)
     quietPct = 5,       -- flysperre: stikka regnes som i ro innenfor ±5 %
@@ -166,13 +169,15 @@ return {
 
   -- Virtuelle kanaler: én verdi per flymodus, brukt av mikserne på rorene
   vch = { snap = 17, ailRud = 18, ailFlap = 19, camber = 20, crowDiff = 21,
-          expoAil = 22, expoEle = 23, expoRud = 24 },   -- stikka med expo (bare når expo ikke er 0)
+          expoAil = 22, expoEle = 23, expoRud = 24,   -- stikka med expo (bare når expo ikke er 0)
+          camDiff = 25 },   -- aileron x ekstra differensial etter camber (bare når den ikke er 0)   -- stikka med expo (bare når expo ikke er 0)
 
   -- Kurver (indeks 0-basert) og logiske brytere (0 = L1) som veiviseren eier
   curves = { flapL = 0, flapR = 1, ailL = 2, ailR = 3, tipL = 4, tipR = 5,
              crow = 6, crowRed = 7, eleComp = 8, motor = 9, camT = 10, camS = 11,
              ailFlapL = 12, ailFlapR = 13,     -- Ail->Flap: opp og ned i % av utslaget, per flap
-             calAilR = 14, calFlapR = 15, calTipR = 16, calVR = 17 },   -- kalibrering høyre side (utgangskurve)
+             calAilR = 14, calFlapR = 15, calTipR = 16, calVR = 17,   -- kalibrering høyre side (utgangskurve)
+             camDiff = 18 },   -- ekstra differensial over camber-signalet (Termikk min/maks)   -- kalibrering høyre side (utgangskurve)
   ls = { landing = 0, motorOn = 1, landMotor = 2, lock = 3, motorRun = 4, lq = 5, rxbt = 6,
          mot1 = 7, mot2 = 8, mot3 = 9,              -- motor-FM: motor tillatt OG motortrinn
          launchG = 10, speedG = 11, thermalG = 12,  -- FM-bryter OG motoren står (glidefly-FM)

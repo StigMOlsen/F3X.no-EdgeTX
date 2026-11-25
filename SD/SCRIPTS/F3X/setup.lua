@@ -151,6 +151,8 @@ return function(L, STD, W)
     a.camScale = nil
     a.crowRed = a.crowRed or V.crowRed
     a.crowDiff = a.crowDiff or V.crowDiff
+    a.camDiffMin = a.camDiffMin or V.camDiffMin
+    a.camDiffMax = a.camDiffMax or V.camDiffMax
     a.diffTrim = a.diffTrim or V.diffTrim
     a.vdiffTrim = a.vdiffTrim or V.vdiffTrim
     a.expo = a.expo or {}
@@ -312,6 +314,9 @@ return function(L, STD, W)
       d[C.camT] = curveDef("CmT", { -100, -75, -50 }, nil, camRev)
       d[C.camS] = curveDef("CmS", { 100, 75, 50 }, nil, camRev)
     end
+    -- Ekstra differensial over camber-signalet: Termikk maks (-100) og min (-50), ellers 0
+    -- (skrives alltid, så justeringen kan gå via 0 uten at alt skrives på nytt)
+    d[C.camDiff] = curveDef("KDf", { a.camDiffMax, a.camDiffMin, 0, 0, 0 })
     -- Ail->Flap: CH19 er aileron ganger andelen i flymodusen. Kurven per flap gir ned- og
     -- opp-utslaget i % av flappens utslag den veien. Venstre flap går ned når CH19 er
     -- positiv, høyre når den er negativ.
@@ -353,6 +358,29 @@ return function(L, STD, W)
     if not def then return false end
     local ok, r = pcall(model.setCurve, idx, def)
     return ok and (r == nil or r == 0)
+  end
+
+  -- Differensial etter camber: grunnverdien fra steg 4 (snitt av venstre og høyre aileron),
+  -- i % (100 - ned/opp). Ekstra differensial legges på i prosentpoeng av opp-utslaget.
+  function S.baseDiff(st)
+    local sum, n = 0, 0
+    for _, role in ipairs({ "ailL", "ailR" }) do
+      local sg = WING_AIL[role]
+      local up, dn = S.rate(st, role, "ail", sg), S.rate(st, role, "ail", -sg)
+      if up ~= 0 then sum = sum + 100 - 100 * dn / up; n = n + 1 end
+    end
+    return n > 0 and L.round(sum / n) or 40
+  end
+
+  function S.camDiffOn(st)
+    local a = st.adj or {}
+    return (a.camDiffMin or 0) ~= 0 or (a.camDiffMax or 0) ~= 0
+  end
+
+  -- Vekt for KDiff: kurven gir ekstra differensial i % av opp-utslaget, tatt fra ned-siden
+  function S.camDiffWeight(st, role)
+    local sg = WING_AIL[role]
+    return L.round(-sg * S.rate(st, role, "ail", sg))
   end
 
   ----------------------------------------------------------------------
@@ -412,6 +440,7 @@ return function(L, STD, W)
     diffTrim("ail", prof.difftrim)
     if cfg.tail == "V" then diffTrim("rud", prof.vdifftrim) end
     local landMask = useFM[1] and 2 or 0
+    p.camDiff = S.camDiffOn(st) or nil
     local roles = W.channels(cfg, false)
     local hasRole = {}
     for _, c in ipairs(roles) do hasRole[c.role] = true end
@@ -445,6 +474,11 @@ return function(L, STD, W)
         add(ch, { name = "CDiff", source = chSrc(VCH.crowDiff), curveType = 2, curveValue = sDown > 0 and 1 or 2,
           weight = S.crowDiffWeight(st, role) })
         p.crowDiff = true
+      end
+      -- Differensial etter camber: mindre ned-aileron jo mer camber i Termikk (CH25)
+      if mainAil and p.camDiff then
+        add(ch, { name = "KDiff", source = chSrc(VCH.camDiff), curveType = 2,
+          curveValue = -WING_AIL[role] > 0 and 1 or 2, weight = S.camDiffWeight(st, role) })
       end
       -- Mindre aileron ved crow: ganger aileron-delen over (for flaps gjøres det i CH19)
       if mainAil and crowId then
@@ -494,6 +528,12 @@ return function(L, STD, W)
       add(VCH.crowDiff, { name = "CDCrow", source = crowId, weight = 100, multiplex = 1, curveType = 3,
         curveValue = C.crow + 1, carryTrim = false })
       p.outputs[VCH.crowDiff] = "CrDiff"
+    end
+    if p.camDiff then
+      add(VCH.camDiff, { name = "KDAil", source = SRC.ail, weight = 100 })
+      add(VCH.camDiff, { name = "KDKamb", source = chSrc(VCH.camber), weight = 100, multiplex = 1, curveType = 3,
+        curveValue = C.camDiff + 1, carryTrim = false })
+      p.outputs[VCH.camDiff] = "KDiff"
     end
     p.outputs[VCH.snap] = "Snap"
     perFM(VCH.ailRud, "ARud", SRC.ail, a.ailRud)
@@ -735,6 +775,16 @@ return function(L, STD, W)
       n = 0
       for _, list in pairs(p.mixes) do n = n + #list end
     end
+    if n > STD.maxMixes and p.camDiff then   -- deretter differensial etter camber
+      p.mixes[VCH.camDiff] = nil
+      for ch, list in pairs(p.mixes) do
+        for i = #list, 1, -1 do if list[i].name == "KDiff" then table.remove(list, i) end end
+      end
+      p.camDiff = nil
+      err("For mange mikser: differensial etter camber er utelatt.")
+      n = 0
+      for _, list in pairs(p.mixes) do n = n + #list end
+    end
     p.mixCount = n
     return p
   end
@@ -920,6 +970,21 @@ return function(L, STD, W)
       end
     end
     if not ok then S.write(S.plan(st.cfg, prof, st), st) end   -- mixene fantes ikke: skriv alt på nytt
+    return true
+  end
+
+  -- Differensial etter camber: kurven skrives direkte. Mangler mixene (første gang), skrives alt.
+  function S.applyCamDiff(st, prof)
+    local have = STD.ch.ailL and L.findMix(STD.ch.ailL, "KDiff")
+    if have and S.writeCurve(st.cfg, prof, st, C.camDiff) then return true end
+    if not have and not S.camDiffOn(st) then return S.writeCurve(st.cfg, prof, st, C.camDiff) end
+    local p = S.plan(st.cfg, prof, st)
+    if not p.camDiff then   -- mikstaket: får ikke plass, skriv ikke alt på nytt for hver endring
+      if not S.kdWarned then L.toast("For mange mikser: differensial etter camber får ikke plass", true) end
+      S.kdWarned = true
+      return false
+    end
+    S.write(p, st)
     return true
   end
 
