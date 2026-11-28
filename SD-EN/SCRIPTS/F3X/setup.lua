@@ -698,7 +698,8 @@ return function(L, STD, W)
     for _, f in ipairs(STD.fms) do
       if useFM[f.fm] then
         local s = L.fmSwitch(f.fm)
-        if s then sf({ switch = s, func = FUNC_PLAY_TRACK, name = f.sound, repetition = 0, label = "Callout: " .. f.name })
+        if s then sf({ switch = s, func = FUNC_PLAY_TRACK, name = f.sound, repetition = f.repeat_s or 0,
+          label = "Callout: " .. f.name .. (f.repeat_s and (" (every " .. f.repeat_s .. " s)") or "") })
         else note("Switch not found for FM" .. f.fm .. ": no callout for " .. f.name .. ".") end
       end
     end

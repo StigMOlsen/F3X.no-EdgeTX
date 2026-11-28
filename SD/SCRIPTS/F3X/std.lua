@@ -158,7 +158,7 @@ return {
     { fm = 0, key = "normal", name = "Normal", sound = "normal" },
     { fm = 1, key = "landing", name = "Landing", sound = "landng" },
     { fm = 2, key = "launch", name = "Launch", sound = "launch" },
-    { fm = 3, key = "speed", name = "Speed", sound = "speed" },
+    { fm = 3, key = "speed", name = "Speed", sound = "speed", repeat_s = 30 }, -- påminnelse hvert 30. s
     { fm = 4, key = "thermal", name = "Termikk", sound = "termik" },
     -- Motor-FM: aktiv mens motoren går, med egen høyderorstrim per motortrinn.
     -- 3-pos bryter for motorkraft gir tre FM, pot/slider gir én (FM5 «Motor»).
